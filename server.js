@@ -2,6 +2,8 @@ const express = require('express');
 const app = express();
 const PORT = 3000;
 
+app.use(express.static('./tesseractcinema-frontend/build'));
+
 app.get('/', (req, res) => {
     res.send('TesseractCinema Backend');
 });
@@ -49,10 +51,28 @@ io.on('connection', (socket) => {
         socket.to(message.broadcastId).emit('receive-message', message);
     });
 
+    socket.on('offer', (offer) => {
+        socket.broadcast.emit('offer', offer);
+    });
+
+    socket.on('answer', (answer) => {
+        socket.broadcast.emit('answer', answer);
+    });
+
+    socket.on('ice-candidate', (iceCandidate) => {
+        socket.broadcast.emit('ice-candidate', iceCandidate);
+    });
+
     socket.on('disconnect', () => {
         console.log('user disconnected');
     });
 });
+    
+http.listen(3001, () => {
+    console.log('Signaling server running on http://localhost:3001');
+});
+
+
 
 // Routes
 const streamRoutes = require('./routes/streamRoutes');
