@@ -101,6 +101,10 @@ io.on('connection', (socket) => {
         // console.log('ice-candidate broadcasted');
     });
 
+    socket.on('disconnect-peer', (userId) => {
+        socket.to(userId).emit('disconnect-peer', socket.id);
+    });
+
     socket.on('disconnect', () => {
         activeBroadcasters = activeBroadcasters.filter(id => id !== socket.id);
         io.emit('update-users', getUserIds());    

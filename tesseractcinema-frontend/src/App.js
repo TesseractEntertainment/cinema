@@ -14,7 +14,7 @@ export default function App() {
 
   async function createOffer(userId) {
     const configuration = {'iceServers': [{'urls': 'stun:stun.l.google.com:19302'}]}
-    const peerConnection = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
+    const peerConnection = new RTCPeerConnection(configuration);
 
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     console.log('Captured audio stream:', stream);
@@ -33,12 +33,18 @@ export default function App() {
       }
     };
     peerConnection.onconnectionstatechange = function(event) {
+      console.log(peerConnection.connectionState);
       setUsers(previous => previous.map((user) => ({
         id: user.id,
         connectionState: user.id === userId ? peerConnection.connectionState : user.connectionState
       })));
-    };    
-    peerConnection.onsignalingstatechange = function(event) {
+      if(peerConnection.connectionState === 'disconnected') {
+        delete peerConnections.current[userId];
+        console.log('deleted peer connection to ', userId);
+      }
+    }; 
+    peerConnection.onsignalingstatechange = (ev) =>{
+      console.log('signal to ' + userId + ' ' + peerConnection.signalingState);
       if(peerConnection.signalingState === 'closed') {
         delete peerConnections.current[userId];
         console.log('deleted peer connection to ', userId);
@@ -49,12 +55,8 @@ export default function App() {
       const offer = await peerConnection.createOffer();
       await peerConnection.setLocalDescription(offer);
 
-      
-      
       peerConnections.current[userId] = peerConnection;
-      console.log(userId, peerConnection);
       console.log('sending offer to ', userId);
-      console.log(peerConnections.current);
       socket.emit('offer', offer, userId);
     } catch (error) {
       console.error("Error creating offer:", error);
@@ -62,8 +64,15 @@ export default function App() {
   }
 
   function disconnectPeer(userId) {
+    console.log('disconnecting from ', userId);
+    socket.emit('disconnect-peer', userId);
     peerConnections.current[userId].close();
-    console.log('closed peer connection to ', userId);
+    delete peerConnections.current[userId];
+    
+    setUsers(previous => previous.map((user) => ({
+      id: user.id,
+      connectionState: user.id === userId ? 'disconnected' : user.connectionState
+    })));
   }
 
   useEffect(() => {
@@ -106,6 +115,7 @@ export default function App() {
       console.log('received offer from ', userId);
       const configuration = {'iceServers': [{'urls': 'stun:stun.l.google.com:19302'}]}
       const peerConnection = new RTCPeerConnection(configuration);
+      peerConnections.current[userId] = peerConnection;
 
       peerConnection.onicecandidate = function(event) {
         if (event.candidate) {
@@ -114,12 +124,18 @@ export default function App() {
         }
       };
       peerConnection.onconnectionstatechange = function(event) {
+        console.log(peerConnection.connectionState);
         setUsers(previous => previous.map((user) => ({
           id: user.id,
           connectionState: user.id === userId ? peerConnection.connectionState : user.connectionState
         })));
+        if(peerConnection.connectionState === 'disconnected') {
+          delete peerConnections.current[userId];
+          console.log('deleted peer connection to ', userId);
+        }
       };
       peerConnection.onsignalingstatechange = function(event) {
+        console.log(peerConnection.signalingState);
         if(peerConnection.signalingState === 'closed') {
           delete peerConnections.current[userId];
           console.log('deleted peer connection to ', userId);
@@ -136,7 +152,6 @@ export default function App() {
       peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
       const answer = await peerConnection.createAnswer();
       await peerConnection.setLocalDescription(answer);
-      peerConnections.current[userId] = peerConnection;
       socket.emit('answer', answer, userId);
     }
 
@@ -148,6 +163,16 @@ export default function App() {
           console.error('Error adding received ice candidate', e);
       }
     }
+
+    function onDisconnectPeer(userId) {
+      console.log('received disconnect-peer from ', userId);
+      peerConnections.current[userId].close();
+      delete peerConnections.current[userId];
+      setUsers(previous => previous.map((user) => ({
+        id: user.id,
+        connectionState: user.id === userId ? 'disconnected' : user.connectionState
+      })));
+    }
   
     socket.on('connect', onConnect);
     socket.on('disconnect', onDisconnect);
@@ -157,14 +182,17 @@ export default function App() {
     socket.on('answer', onAnswer);
     socket.on('offer', onOffer);
     socket.on('ice-candidate', onIcecandidate);
+    socket.on('disconnect-peer', onDisconnectPeer);
 
     return () => {
       socket.off('connect', onConnect);
       socket.off('disconnect', onDisconnect);
       socket.off('foo', onFooEvent);
       socket.off('update-users', onUpdateUsers);
+      
       socket.off('answer', onAnswer);
       socket.off('offer', onOffer);
+      socket.off('ice-candidate', onIcecandidate);
     };
   }, []);
 
