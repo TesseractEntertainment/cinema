@@ -1,19 +1,31 @@
-const express = require('express');
-const app = express();
-const PORT = 3000;
+import express from 'express';
+import { createServer, get } from 'node:http';
+import { Server } from 'socket.io';
+import cors from 'cors';
+import mongoose from 'mongoose';
+import streamRoutes from './routes/streamRoutes.js';
 
-app.use(express.static('./tesseractcinema-frontend/build'));
+const PORT = 4000;
+const SIGNALPORT = 4000;
+
+const app = express();
+const http = createServer(app);
+
+app.use(cors({
+    origin: 'http://localhost:3000'
+}));
+
+app.use(express.static('./tesseractcinema-frontend/public'));
 
 app.get('/', (req, res) => {
     res.send('TesseractCinema Backend');
 });
 
-app.listen(PORT, () => {
+http.listen(PORT, () => {
     console.log(`Server is running on http://localhost:${PORT}`);
 });
 
 // MongoDB
-const mongoose = require('mongoose');
 
 mongoose.connect('mongodb://127.0.0.1:27017/tesseractcinema', {
     useNewUrlParser: true,
@@ -27,53 +39,90 @@ db.once('open', function() {
 });
 
 // Socket.io
-const http = require('http').createServer(app);
-const io = require('socket.io')(http);
+const io = new Server(http, {
+    cors: {
+        origin: "http://localhost:3000",
+        methods: ["GET", "POST"]
+    }
+});
+
+let activeBroadcasters = [];
+let broadcasts = {};
 
 io.on('connection', (socket) => {
-    console.log('a user connected');
+    console.log('a user connected: ', socket.id);
 
+    // Send the current list of broadcasters to the newly connected client
+    socket.emit('update-broadcast-list', getActiveBroadcasts());
+    io.emit('update-users', getUserIds());    
+    console.log('updated users: ', getUserIds());
+    console.log('updated broadcast list: ', getActiveBroadcasts());
+
+    // When a user wants to start broadcasting
     socket.on('start-broadcast', (data) => {
-        // Handle broadcast start
-        // For example, you might emit this to other users to notify them
-        io.emit('new-broadcast', data);
+        broadcasts[socket.id] = {
+            broadcaster: socket.id,
+            listeners: []
+        };
+        activeBroadcasters.push(socket.id);
+        socket.join(`broadcast_${socket.id}`);
+        console.log('activeBroadcasters: ', getActiveBroadcasts());
+        // Notify all users about the new broadcast
+        io.emit('update-broadcast-list', getActiveBroadcasts());
     });
 
-    socket.on('join-broadcast', (data) => {
-        // Handle joining a broadcast
-        // You can use socket.join() to add the user to a specific broadcast "room"
-        socket.join(data.broadcastId);
+    socket.on('join-broadcast', (broadcasterId) => {
+        // Logic to handle a listener joining a broadcast
+
+        // For example, if you're using rooms in socket.io:
+        socket.join(`broadcast_${broadcasterId}`);
+
+        // Notify the broadcaster that a new listener has joined
+        io.to(broadcasterId).emit('new-listener', socket.id);
     });
 
-    socket.on('send-message', (message) => {
-        // Handle chat message
-        // If using rooms, you can emit the message to a specific room
-        socket.to(message.broadcastId).emit('receive-message', message);
+    socket.on('create-something', (value) => {
+        socket.emit('foo', value);
     });
 
-    socket.on('offer', (offer) => {
-        socket.broadcast.emit('offer', offer);
+    socket.on('offer', (offer, userId) => {
+        socket.to(userId).emit('offer', offer, socket.id);
+    });
+    
+    socket.on('answer', (answer, userId) => {
+        socket.to(userId).emit('answer', answer, socket.id);
     });
 
-    socket.on('answer', (answer) => {
-        socket.broadcast.emit('answer', answer);
-    });
-
-    socket.on('ice-candidate', (iceCandidate) => {
-        socket.broadcast.emit('ice-candidate', iceCandidate);
+    // When a user sends an ICE candidate
+    socket.on('ice-candidate', (iceCandidate, userId) => {
+        // Broadcast the ICE candidate to the other user
+        // console.log('new ice candidate from ', socket.id);
+        socket.to(userId).emit('ice-candidate', iceCandidate, socket.id);
+        // console.log('ice-candidate broadcasted');
     });
 
     socket.on('disconnect', () => {
-        console.log('user disconnected');
+        activeBroadcasters = activeBroadcasters.filter(id => id !== socket.id);
+        io.emit('update-users', getUserIds());    
+        io.emit('update-broadcast-list', getActiveBroadcasts());
+        console.log('user disconnected: ', socket.id);
     });
 });
-    
-http.listen(3001, () => {
-    console.log('Signaling server running on http://localhost:3001');
-});
+
+function getActiveBroadcasts() {
+    const rooms = io.sockets.adapter.rooms;
+    console.log('Rooms: ', rooms.keys());
+    const broadcastRooms = Array.from(rooms.keys()).filter(roomName => roomName.startsWith('broadcast_'));
+    console.log('Broadcast rooms: ', broadcastRooms);
+    return broadcastRooms;
+}
+
+function getUserIds() {
+    return Array.from(io.sockets.sockets.keys());
+}
+
 
 
 
 // Routes
-const streamRoutes = require('./routes/streamRoutes');
 app.use('/api/streams', streamRoutes);

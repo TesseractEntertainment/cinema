@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 const streamSchema = new mongoose.Schema({
     title: String,
@@ -6,4 +6,4 @@ const streamSchema = new mongoose.Schema({
     date: { type: Date, default: Date.now }
 });
 
-module.exports = mongoose.model('Stream', streamSchema);
+export default mongoose.model('Stream', streamSchema);

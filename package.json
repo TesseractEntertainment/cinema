@@ -1,5 +1,6 @@
 {
   "name": "cinema",
+  "type": "module",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
@@ -19,6 +20,7 @@
   "homepage": "https://github.com/TesseractEntertainment/cinema#readme",
   "dependencies": {
     "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
     "express": "^4.18.2",
     "jsonwebtoken": "^9.0.2",
     "mongodb": "^6.1.0",
@@ -26,4 +28,7 @@
     "socket.io": "^4.7.2",
     "socket.io-client": "^4.7.2"
   }
+  
+  
+  
 }

@@ -1,6 +1,6 @@
-const express = require('express');
+import express from 'express';
+import Stream from '../models/Stream.js';
 const router = express.Router();
-const Stream = require('../models/Stream');
 
 // Create a new stream
 router.post('/create', async (req, res) => {
@@ -17,4 +17,4 @@ router.get('/', async (req, res) => {
     res.json(streams);
 });
 
-module.exports = router;
+export default router;
