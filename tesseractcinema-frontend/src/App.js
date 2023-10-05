@@ -11,71 +11,166 @@ export default function App() {
   const [fooEvents, setFooEvents] = useState([]);
   const [users, setUsers] = useState([]);
   const peerConnections = useRef({}); // [socketId: string]: RTCPeerConnection
+  
+  function onICECandidate(event) {
+    if (event.candidate) {
+      console.log('new ICE candidate');
+      socket.emit('ice-candidate', event.candidate, event.target.id);
+    }
+  }
 
-  async function createOffer(userId) {
-    const configuration = {'iceServers': [{'urls': 'stun:stun.l.google.com:19302'}]}
-    const peerConnection = new RTCPeerConnection(configuration);
-
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    console.log('Captured audio stream:', stream);
-    stream.getTracks().forEach(track => {
-      peerConnection.addTrack(track, stream); 
-      console.log('Added track:', track)
-    });
-    
-    peerConnection.onicegatheringstatechange = function(event) {
-      console.log(peerConnection.iceGatheringState);
-    };
-    peerConnection.onicecandidate = function(event) {
-      if (event.candidate) {
-        console.log('new ICE candidate');
-        socket.emit('ice-candidate', event.candidate, userId);
-      }
-    };
-    peerConnection.onconnectionstatechange = function(event) {
-      console.log(peerConnection.connectionState);
-      setUsers(previous => previous.map((user) => ({
-        id: user.id,
-        connectionState: user.id === userId ? peerConnection.connectionState : user.connectionState
-      })));
-      if(peerConnection.connectionState === 'disconnected') {
-        delete peerConnections.current[userId];
-        console.log('deleted peer connection to ', userId);
-      }
-    }; 
-    peerConnection.onsignalingstatechange = (ev) =>{
-      console.log('signal to ' + userId + ' ' + peerConnection.signalingState);
-      if(peerConnection.signalingState === 'closed') {
-        delete peerConnections.current[userId];
-        console.log('deleted peer connection to ', userId);
-      }
-    };
+  async function onNegotiationNeeded(event) {
+    console.log('negotiation needed for ', event.target.id, '');
+    if (peerConnections.current[event.target.id].streamTo && !peerConnections.current[event.target.id].getSenders().length > 0) {
+      streamAudio(event.target.id);
+    }
 
     try {
-      const offer = await peerConnection.createOffer();
-      await peerConnection.setLocalDescription(offer);
-
-      peerConnections.current[userId] = peerConnection;
-      console.log('sending offer to ', userId);
-      socket.emit('offer', offer, userId);
+      const offer = await peerConnections.current[event.target.id].createOffer();
+      await peerConnections.current[event.target.id].setLocalDescription(offer);
+      socket.emit('offer', offer, event.target.id);
     } catch (error) {
       console.error("Error creating offer:", error);
     }
+  }
+  
+  function onTrack(event) {
+    const [stream] = event.streams;
+    // Assuming you have an <audio> element in your component to play the audio
+    const audioElement = document.querySelector('audio');
+    audioElement.srcObject = stream;
+    audioElement.play();
+  }
+
+  function onICEConnectionStateChange(event) {
+    console.log('ICE connection state change:', event.target.iceConnectionState);
+    switch (peerConnections.current[event.target.id].iceConnectionState) {
+      case "closed":
+      case "failed":
+        closePeerConnection(event.target.id);
+        break;
+      default: break;
+    }
+    setUsers(previous => previous.map((user) => ({
+      id: user.id,
+      connectionState: user.id === event.target.id ? event.target.iceConnectionState : user.connectionState
+    })));
+  }
+
+  function onICEGatheringStateChange(event) {
+    console.log('ICE gathering state change:', event.target.iceGatheringState);
+  }
+
+  function onSignalingStateChange(event) {
+    console.log('signaling state change:', event.target.signalingState);
+    switch (peerConnections.current[event.target.id].signalingState) {
+      case "closed":
+        closePeerConnection(event.target.id);
+        break;
+      default: break;
+    }
+  }
+  
+  function createPeerConnection(userId) {
+    console.log('creating peer connection with ', userId);
+    const configuration = {'iceServers': [{'urls': 'stun:stun.l.google.com:19302'}]}
+    const peerConnection = new RTCPeerConnection(configuration);
+    // Add extra properties to the peer connection
+    peerConnection.id = userId;
+    peerConnection.streamTo = false;
+
+    if (peerConnections.current[userId]) {
+      closePeerConnection(userId);
+    }
+    peerConnections.current[userId] = peerConnection;
+    
+    // Add event handlers to the newly created peer connection
+    peerConnection.onicecandidate = onICECandidate;
+    peerConnection.onnegotiationneeded = onNegotiationNeeded;
+    peerConnection.ontrack = onTrack;
+    peerConnection.oniceconnectionstatechange = onICEConnectionStateChange;
+    peerConnection.onicegatheringstatechange = onICEGatheringStateChange;
+    peerConnection.onsignalingstatechange = onSignalingStateChange;
   }
 
   function disconnectPeer(userId) {
     console.log('disconnecting from ', userId);
     socket.emit('disconnect-peer', userId);
-    peerConnections.current[userId].close();
-    delete peerConnections.current[userId];
+    closePeerConnection(userId);
+  }
+  
+  function closePeerConnection(userId) {
+    const peerConnection = peerConnections.current[userId];
+    // const remoteVideo = document.getElementById("received_video");
+    // const localVideo = document.getElementById("local_video");
+  
+    if (peerConnection) {
+      peerConnection.onicecandidate = null;
+      peerConnection.onnegotiationneeded = null;
+      peerConnection.ontrack = null;
+      peerConnection.oniceconnectionstatechange = null;
+      peerConnection.onicegatheringstatechange = null;
+      peerConnection.onsignalingstatechange = null;
+
+      // TODO: close media streams
+      // if (remoteVideo.srcObject) {
+      //   remoteVideo.srcObject.getTracks().forEach((track) => track.stop());
+      // }
+      
+      // if (localVideo.srcObject) {
+        //   localVideo.srcObject.getTracks().forEach((track) => track.stop());
+      // }
+      stopStream(userId);
+      peerConnection.close();
+      delete peerConnections.current[userId];
+      
+      setUsers(previous => previous.map((user) => ({
+        id: user.id,
+        connectionState: user.id === userId ? 'disconnected' : user.connectionState
+      })));
+    }
     
-    setUsers(previous => previous.map((user) => ({
-      id: user.id,
-      connectionState: user.id === userId ? 'disconnected' : user.connectionState
-    })));
+    // remoteVideo.removeAttribute("src");
+    // remoteVideo.removeAttribute("srcObject");
+    // localVideo.removeAttribute("src");
+    // remoteVideo.removeAttribute("srcObject");
   }
 
+  function requestStream(userId) {
+    console.log('requesting stream from ', userId);
+    socket.emit('request-stream', userId);
+  }
+  
+  // TODO
+  async function streamAudio(userId) {    
+    if(!peerConnections.current[userId]) {
+      createPeerConnection(userId);
+    }
+    try {
+      peerConnections.current[userId].streamTo = true;
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      console.log('Captured audio stream:', stream);
+      stream.getTracks().forEach(track => {
+        peerConnections.current[userId].addTrack(track, stream); 
+        console.log('Added track:', track)
+      });
+    }
+    catch (error) {
+      console.error('Error streaming audio to', userId, error);
+      disconnectPeer(userId);
+    }
+  }
+
+  function stopStream(userId) {
+    console.log('stopping stream to ', userId);
+    peerConnections.current[userId].getSenders().forEach((sender) => {
+      if(sender.track) sender.track.stop();
+    });
+    peerConnections.current[userId].streamTo = false;
+  }
+  
   useEffect(() => {
+    // Socket event handlers
     function onConnect() {
       setIsConnected(true);
     }
@@ -92,8 +187,7 @@ export default function App() {
       if(Object.keys(peerConnections.current).length > 0) {
         const disconnectedPeers = Object.keys(peerConnections.current).filter((userId) => !userIds.includes(userId));
         disconnectedPeers.forEach((userId) => {
-          peerConnections.current[userId].close() // close connections to users that are no longer connected
-          delete peerConnections.current[userId]; // filter out users that are no longer connected
+          closePeerConnection(userId);
         }); 
       }
 
@@ -104,74 +198,43 @@ export default function App() {
       console.log('updated users: ', userIds);
     }
 
+    // WebRTC event handlers
     async function onAnswer(answer, userId) {
       console.log('received answer from ', userId);
-      console.log(peerConnections.current);
       const remoteDesc = new RTCSessionDescription(answer);
       await peerConnections.current[userId].setRemoteDescription(remoteDesc);
     }
 
     async function onOffer(offer, userId) {      
       console.log('received offer from ', userId);
-      const configuration = {'iceServers': [{'urls': 'stun:stun.l.google.com:19302'}]}
-      const peerConnection = new RTCPeerConnection(configuration);
-      peerConnections.current[userId] = peerConnection;
-
-      peerConnection.onicecandidate = function(event) {
-        if (event.candidate) {
-          console.log('new ICE candidate');
-          socket.emit('ice-candidate', event.candidate, userId);
-        }
-      };
-      peerConnection.onconnectionstatechange = function(event) {
-        console.log(peerConnection.connectionState);
-        setUsers(previous => previous.map((user) => ({
-          id: user.id,
-          connectionState: user.id === userId ? peerConnection.connectionState : user.connectionState
-        })));
-        if(peerConnection.connectionState === 'disconnected') {
-          delete peerConnections.current[userId];
-          console.log('deleted peer connection to ', userId);
-        }
-      };
-      peerConnection.onsignalingstatechange = function(event) {
-        console.log(peerConnection.signalingState);
-        if(peerConnection.signalingState === 'closed') {
-          delete peerConnections.current[userId];
-          console.log('deleted peer connection to ', userId);
-        }
-      };
-      peerConnection.ontrack = function(event) {
-        const [stream] = event.streams;
-        // Assuming you have an <audio> element in your component to play the audio
-        const audioElement = document.querySelector('audio');
-        audioElement.srcObject = stream;
-        audioElement.play();
-      };
-
-      peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
-      const answer = await peerConnection.createAnswer();
-      await peerConnection.setLocalDescription(answer);
-      socket.emit('answer', answer, userId);
+      if(!peerConnections.current[userId]) {
+        createPeerConnection(userId);
+      }
+      const desc = new RTCSessionDescription(offer);
+      await peerConnections.current[userId].setRemoteDescription(desc);
+      const ans = await peerConnections.current[userId].createAnswer();
+      await peerConnections.current[userId].setLocalDescription(ans);
+      
+      socket.emit('answer', ans, userId);
     }
 
     async function onIcecandidate(candidate, userId) {
+      console.log('received ice candidate from ', userId);
       try {
-          await peerConnections.current[userId].addIceCandidate(candidate);
-          console.log('Received and added ICE candidate:', candidate);
-      } catch (e) {
-          console.error('Error adding received ice candidate', e);
+        await peerConnections.current[userId].addIceCandidate(candidate);
+      } catch (error) {
+        console.error('Error adding received ice candidate', error);
       }
     }
-
+    
     function onDisconnectPeer(userId) {
       console.log('received disconnect-peer from ', userId);
-      peerConnections.current[userId].close();
-      delete peerConnections.current[userId];
-      setUsers(previous => previous.map((user) => ({
-        id: user.id,
-        connectionState: user.id === userId ? 'disconnected' : user.connectionState
-      })));
+      closePeerConnection(userId);
+    }
+
+    function onRequestStream(userId) {
+      console.log('received stream request from ', userId, '');
+      streamAudio(userId);
     }
   
     socket.on('connect', onConnect);
@@ -183,23 +246,26 @@ export default function App() {
     socket.on('offer', onOffer);
     socket.on('ice-candidate', onIcecandidate);
     socket.on('disconnect-peer', onDisconnectPeer);
+    socket.on('request-stream', onRequestStream);
 
     return () => {
       socket.off('connect', onConnect);
       socket.off('disconnect', onDisconnect);
       socket.off('foo', onFooEvent);
       socket.off('update-users', onUpdateUsers);
-      
+
       socket.off('answer', onAnswer);
       socket.off('offer', onOffer);
       socket.off('ice-candidate', onIcecandidate);
+      socket.off('disconnect-peer', onDisconnectPeer);
+      socket.off('request-stream', onRequestStream);
     };
   }, []);
 
   return (
     <div className="App">
       <ConnectionState isConnected={ isConnected } />
-      <Users users={users} peerConnections={peerConnections.current} createOffer={createOffer} disconnectPeer={disconnectPeer}/>
+      <Users users={users} peerConnections={peerConnections.current} createOffer={requestStream} disconnectPeer={disconnectPeer} streamAudio={streamAudio} stopStream={stopStream} />
       <Events events={ fooEvents } />
       <ConnectionManager />
       <MyForm />

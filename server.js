@@ -105,6 +105,10 @@ io.on('connection', (socket) => {
         socket.to(userId).emit('disconnect-peer', socket.id);
     });
 
+    socket.on('request-stream', (userId) => {
+        socket.to(userId).emit('request-stream', socket.id);
+    });
+
     socket.on('disconnect', () => {
         activeBroadcasters = activeBroadcasters.filter(id => id !== socket.id);
         io.emit('update-users', getUserIds());    
