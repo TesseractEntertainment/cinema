@@ -1,15 +1,14 @@
-import express from 'express';
-import Stream from '../models/Stream.js';
-const router = express.Router();
+import express, { Request, Response, Router } from 'express';
+const router: Router = express.Router();
 
 // Create a new stream
-router.post('/create', async (req, res) => {
+router.post('/create', async (req: Request, res: Response) => {
     // ... implementation
     res.status(201).json({ message: 'Stream created successfully' });
 });
 
 // List all streams
-router.get('/', async (req, res) => {
+router.get('/', async (req: Request, res: Response) => {
     const streams = [
         { id: 1, title: 'Movie 1' },
         { id: 2, title: 'Movie 2' }

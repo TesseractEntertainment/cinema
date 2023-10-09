@@ -179,11 +179,12 @@ export default function App() {
       setIsConnected(false);
     }
 
-    function onFooEvent(value) {
-      setFooEvents(previous => [...previous, value]);
-    }
-
-    function onUpdateUsers(userIds) {
+    function onUpdateUsers(updatedUsers) {
+      console.log('updated users: ', updatedUsers);
+      var userIds = [];
+      if(updatedUsers.length > 0) {
+        userIds = updatedUsers.map(user => user._socketId);
+      }
       if(Object.keys(peerConnections.current).length > 0) {
         const disconnectedPeers = Object.keys(peerConnections.current).filter((userId) => !userIds.includes(userId));
         disconnectedPeers.forEach((userId) => {
@@ -239,7 +240,6 @@ export default function App() {
   
     socket.on('connect', onConnect);
     socket.on('disconnect', onDisconnect);
-    socket.on('foo', onFooEvent);
     socket.on('update-users', onUpdateUsers);
 
     socket.on('answer', onAnswer);
@@ -251,7 +251,6 @@ export default function App() {
     return () => {
       socket.off('connect', onConnect);
       socket.off('disconnect', onDisconnect);
-      socket.off('foo', onFooEvent);
       socket.off('update-users', onUpdateUsers);
 
       socket.off('answer', onAnswer);

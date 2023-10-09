@@ -1,10 +1,10 @@
 {
   "name": "cinema",
-  "type": "module",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
   "scripts": {
+    "start": "nodemon",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -19,6 +19,10 @@
   },
   "homepage": "https://github.com/TesseractEntertainment/cinema#readme",
   "dependencies": {
+    "@types/cors": "^2.8.14",
+    "@types/mongoose": "^5.11.97",
+    "@types/socket.io": "^3.0.2",
+    "@types/uuid": "^9.0.5",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "express": "^4.18.2",
@@ -26,9 +30,21 @@
     "mongodb": "^6.1.0",
     "mongoose": "^7.5.2",
     "socket.io": "^4.7.2",
-    "socket.io-client": "^4.7.2"
+    "socket.io-client": "^4.7.2",
+    "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.18",
+    "@types/node": "^20.8.3",
+    "nodemon": "^3.0.1",
+    "ts-node": "^10.9.1",
+    "typescript": "^5.2.2"
+  },
+  "nodemonConfig": {
+    "watch": [
+      "src/"
+    ],
+    "ext": ".ts,.js,.json,.tsx,.jsx",
+    "exec": "ts-node ./src/server.ts"
   }
-  
-  
-  
 }
