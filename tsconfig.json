@@ -108,7 +108,7 @@
   },
   "include": [
     "src/**/*.ts"
-, "src/io.ts"  ],
+, "src/util/io.ts"  ],
   "exclude": [
     "node_modules"
   ]

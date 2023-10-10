@@ -1,6 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import { User } from './User';
-import { io } from '../io';
+import { io } from './io';
 
 export class Broadcast {
     private _roomId: string;

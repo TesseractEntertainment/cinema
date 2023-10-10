@@ -2,7 +2,8 @@ import { Socket } from 'socket.io';
 import streamRoutes from './routes/streamRoutes';
 import { Broadcast } from './util/Broadcast';
 import { User } from './util/User';
-import { app, io } from './io';
+import { app, io } from './util/io';
+import { send } from 'process';
 
 io.on('connection', (socket) => {
     createUser(socket);
@@ -40,11 +41,15 @@ io.on('connection', (socket) => {
 const users: Map<string, User> = new Map();
 const broadcasts: Map<string, Broadcast> = new Map();
 
+function sendUpdateUsers() {
+    io.emit('update-users', Array.from(users.values()));
+}
+
 function createUser(socket: Socket, name?: string) {
     const user = new User(socket, name);
     users.set(socket.id, user);
-    console.log(users)
-    io.emit('update-users', Array.from(users.values()));
+    console.log(users);
+    sendUpdateUsers();
     socket.emit('update-broadcasts', broadcasts); 
     console.log('a user was added: ', user.name);
     return user;
@@ -62,7 +67,7 @@ function removeUser(socket: Socket) {
         }
     });
     users.delete(user.id);
-    io.emit('update-users', users);
+    sendUpdateUsers();
     console.log('user removed: ', user.name);   
 }
 

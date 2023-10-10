@@ -1,5 +1,5 @@
 import { Server, Socket } from 'socket.io';
-import { io } from '../io';
+import { io } from './io';
 
 export class User {
     private _socketId: string 
