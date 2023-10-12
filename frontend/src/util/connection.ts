@@ -2,6 +2,7 @@ import { io } from 'socket.io-client';
 import { PeerConnection } from './interfaces';
 import { updateConnectionState } from './users';
 import { Dispatcher, DispatcherEvent } from './dispatcher';
+import { PeerConnectionState } from './enums';
 
 // "undefined" means the URL will be computed from the `window.location` object
 const URL: any = process.env.NODE_ENV === 'production' ? undefined : 'http://localhost:4000';
@@ -83,7 +84,7 @@ export function onICEConnectionStateChange(event: Event) {
         break;
       default: break;
     }
-    updateConnectionState(peerConnection.id, peerConnection.iceConnectionState);
+    updateConnectionState(peerConnection.id, connectionStateToPeerConnectionState(peerConnection.iceConnectionState));
   }
 
 export function onICEGatheringStateChange(event: Event) {
@@ -110,6 +111,7 @@ export function createPeerConnection(userId: string) {
   const peerConnection = new RTCPeerConnection(configuration) as PeerConnection;
   peerConnection.id = userId;
   peerConnection.hasOutgoingAudio = false;
+  peerConnection.hasIncomingAudio = false;
 
   if (_peerConnections.has(userId)) {
     closePeerConnection(userId);
@@ -123,6 +125,8 @@ export function createPeerConnection(userId: string) {
   peerConnection.oniceconnectionstatechange = onICEConnectionStateChange;
   peerConnection.onicegatheringstatechange = onICEGatheringStateChange;
   peerConnection.onsignalingstatechange = onSignalingStateChange;
+
+  updateConnectionState(userId, PeerConnectionState.READY);
 }
 
 /*
@@ -169,7 +173,7 @@ export function closePeerConnection(userId: string) {
     peerConnection.close();
     _peerConnections.delete(userId);
     
-    updateConnectionState(userId, 'disconnected');
+    updateConnectionState(userId, PeerConnectionState.DISCONNECTED);
   }
   
   // remoteVideo.removeAttribute("src");
@@ -268,5 +272,24 @@ export async function onIcecandidate(candidate: any, userId: string) {
     await peerConnection!.addIceCandidate(candidate);
   } catch (error) {
     console.error('Error adding received ice candidate', error);
+  }
+}
+
+export function connectionStateToPeerConnectionState(connectionState: string) {
+  switch (connectionState) {
+      case 'completed':
+      case 'connected':
+          return PeerConnectionState.CONNECTED;
+      case 'closed':
+      case 'disconnected':
+        return PeerConnectionState.DISCONNECTED;
+      case 'new':
+      case 'checking':
+      case 'connecting':
+          return PeerConnectionState.CONNECTING;
+      case 'failed':
+          return PeerConnectionState.FAILED;
+      default:
+          return PeerConnectionState.DISCONNECTED;
   }
 }

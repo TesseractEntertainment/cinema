@@ -1,5 +1,6 @@
-import { closePeerConnection, getPeerConnections } from "./connection";
+import { closePeerConnection, connectionStateToPeerConnectionState, getPeerConnections } from "./connection";
 import { Dispatcher, DispatcherEvent } from "./dispatcher";
+import { PeerConnectionState } from "./enums";
 import { User } from "./interfaces";
 
 var _users: User[] = [];
@@ -29,7 +30,7 @@ export function removeUser(userId: string) {
 export function updateUser(userId: string, updatedUser: User) {
     setUsers(_users.map((user) => user.id === userId ? updatedUser : user));
 }
-export function updateConnectionState(userId: string, connectionState: string) {
+export function updateConnectionState(userId: string, connectionState: PeerConnectionState) {
     setUsers(_users.map((user) => user.id === userId ? { ...user, connectionState } : user));
 }
 export function getUser(userId: string) {
@@ -40,21 +41,21 @@ export function hasUser(userId: string) {
 }
 
 export function onUpdateUsers(updatedUsers: {_socketId: string; _name: string; }[]) {
-    var userIds: string[] = [];
-    if(updatedUsers.length > 0) {
-      userIds = updatedUsers.map((user: { _socketId: string; }) => user._socketId);
-    }
-    const peerConnections = getPeerConnections();
-    if(peerConnections.size > 0) {
-      const disconnectedPeers = Array.from(peerConnections.keys()).filter((userId) => !userIds.includes(userId));
-      disconnectedPeers.forEach((userId) => {
-        closePeerConnection(userId);
-      }); 
-    }
-    setUsers(updatedUsers.map((user) => ({ 
-      id: user._socketId,
-      name: user._name, 
-      connectionState: peerConnections.has(user._socketId) ? peerConnections.get(user._socketId)!.connectionState : 'no connection' 
-    })));
-    console.log('updated users: ', updatedUsers);
+  var userIds: string[] = [];
+  if(updatedUsers.length > 0) {
+    userIds = updatedUsers.map((user: { _socketId: string; }) => user._socketId);
   }
+  const peerConnections = getPeerConnections();
+  if(peerConnections.size > 0) {
+    const disconnectedPeers = Array.from(peerConnections.keys()).filter((userId) => !userIds.includes(userId));
+    disconnectedPeers.forEach((userId) => {
+      closePeerConnection(userId);
+    }); 
+  }
+  setUsers(updatedUsers.map((user) => ({
+    id: user._socketId,
+    name: user._name, 
+    connectionState: peerConnections.has(user._socketId) ? connectionStateToPeerConnectionState(peerConnections.get(user._socketId)!.connectionState) : PeerConnectionState.DISCONNECTED 
+  })));
+  console.log('updated users: ', updatedUsers);
+}

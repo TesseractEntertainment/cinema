@@ -1,12 +1,15 @@
+import { PeerConnectionState } from "./enums";
+
 export interface User {
     id: string;
     name: string;
-    connectionState: string;
+    connectionState: PeerConnectionState;
 }
 
 export interface PeerConnection extends RTCPeerConnection {
     id: string;
     hasOutgoingAudio: boolean;
+    hasIncomingAudio: boolean;
 }
 
 export interface Broadcast {
