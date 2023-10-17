@@ -13,7 +13,7 @@ export interface Broadcast {
 * Sets the broadcasts state and dispatches the SET_BROADCAST_STATE event
 * @param {Broadcast[]} broadcasts - The new broadcasts state
 */
-export function _setBroadcasts(broadcasts: Broadcast[]) {
+function setBroadcasts(broadcasts: Broadcast[]) {
     _broadcasts = broadcasts;
     Dispatcher.dispatch(DispatcherEvent.SET_BROADCAST_STATE, broadcasts);
 }
@@ -22,29 +22,26 @@ export function _setBroadcasts(broadcasts: Broadcast[]) {
 * Returns the broadcasts
 * @returns {Broadcast[]} - The broadcasts
 */
-export function getBroadcasts() {
+function getBroadcasts() {
     return _broadcasts;
 }
-export function setBroadcasts(broadcasts: Broadcast[]) {
-    _setBroadcasts(broadcasts);
+function addBroadcast(broadcast: Broadcast) {
+    setBroadcasts([..._broadcasts, broadcast]);
 }
-export function addBroadcast(broadcast: Broadcast) {
-    _setBroadcasts([..._broadcasts, broadcast]);
+function removeBroadcast(broadcastId: string) {
+    setBroadcasts(_broadcasts.filter((broadcast) => broadcast.id !== broadcastId));
 }
-export function removeBroadcast(broadcastId: string) {
-    _setBroadcasts(_broadcasts.filter((broadcast) => broadcast.id !== broadcastId));
+function updateBroadcast(broadcastId: string, updatedBroadcast: Broadcast) {
+    setBroadcasts(_broadcasts.map((broadcast) => broadcast.id === broadcastId ? updatedBroadcast : broadcast));
 }
-export function updateBroadcast(broadcastId: string, updatedBroadcast: Broadcast) {
-    _setBroadcasts(_broadcasts.map((broadcast) => broadcast.id === broadcastId ? updatedBroadcast : broadcast));
-}
-export function getBroadcast(broadcastId: string) {
+function getBroadcast(broadcastId: string) {
     return _broadcasts.find((broadcast) => broadcast.id === broadcastId);
 }
-export function hasBroadcast(broadcastId: string) {
+function hasBroadcast(broadcastId: string) {
     return _broadcasts.some((broadcast) => broadcast.id === broadcastId);
 }
 
-export function onUpdateBroadcasts(updatedBroadcasts: {_id: string; _broadcasterIds: string[], _listenerIds: string[], _name: string; }[]) {
+function onUpdateBroadcasts(updatedBroadcasts: {_id: string; _broadcasterIds: string[], _listenerIds: string[], _name: string; }[]) {
   setBroadcasts(updatedBroadcasts.map((broadcast) => ({
     id: broadcast._id,
     name: broadcast._name,
@@ -52,3 +49,51 @@ export function onUpdateBroadcasts(updatedBroadcasts: {_id: string; _broadcaster
     listenerIds: broadcast._listenerIds
   })));
 }
+
+function onUpdateBroadcast(updatedBroadcast: {_id: string; _broadcasterIds: string[], _listenerIds: string[], _name: string; }) {
+    updateBroadcast(updatedBroadcast._id, {
+        id: updatedBroadcast._id,
+        name: updatedBroadcast._name,
+        broadcasterIds: updatedBroadcast._broadcasterIds,
+        listenerIds: updatedBroadcast._listenerIds
+    });
+    }
+
+function onJoinBroadcast(broadcastId: string) {
+    // TODO
+}
+
+function onLeaveBroadcast(broadcastId: string) {
+    // TODO
+}
+
+function onTerminateBroadcast(broadcastId: string) {
+  removeBroadcast(broadcastId);
+}
+
+function onCreateBroadcast(broadcast: {_id: string; _broadcasterIds: string[], _listenerIds: string[], _name: string; }) {
+  addBroadcast({
+    id: broadcast._id,
+    name: broadcast._name,
+    broadcasterIds: broadcast._broadcasterIds,
+    listenerIds: broadcast._listenerIds
+  });
+}
+
+export const BroadcastFunctions = { 
+    setBroadcasts,
+    getBroadcasts,
+    addBroadcast,
+    removeBroadcast,
+    updateBroadcast,
+    getBroadcast,
+    hasBroadcast,
+}
+export const BroadcastEvents = {
+    onUpdateBroadcasts,
+    onUpdateBroadcast,
+    onJoinBroadcast,
+    onLeaveBroadcast,
+    onTerminateBroadcast,
+    onCreateBroadcast
+};
