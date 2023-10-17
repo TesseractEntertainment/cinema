@@ -1,7 +1,7 @@
 import { Socket } from 'socket.io';
 import streamRoutes from './routes/streamRoutes';
-import { BroadcastFunctions } from './util/broadcast';
-import { UserFunctions } from './util/user';
+import { BroadcastFunctions } from './util/Broadcast';
+import { UserFunctions } from './util/User';
 import { app, io } from './util/io';
 import { SocketEvents } from './util/socketEvents';
 

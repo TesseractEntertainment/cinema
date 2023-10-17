@@ -1,7 +1,7 @@
 import { Server, Socket } from 'socket.io';
 import { io } from './io';
 import { SocketEvents } from './socketEvents';
-import { BroadcastFunctions } from './broadcast';
+import { BroadcastFunctions } from './Broadcast';
 
 const users: Map<string, User> = new Map();
 

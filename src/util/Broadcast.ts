@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
-import { UserFunctions } from './user';
+import { UserFunctions } from './User';
 import { io } from './io';
 import { SocketEvents } from './socketEvents';
 

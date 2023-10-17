@@ -1,6 +1,5 @@
-import { ConnectionFunctions } from "./connection";
+import { ConnectionFunctions, PeerConnectionState } from "./connection";
 import { Dispatcher, DispatcherEvent } from "./dispatcher";
-import { PeerConnectionState } from "./connection";
 
 var _users: User[] = [];
 
