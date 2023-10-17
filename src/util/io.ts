@@ -24,13 +24,13 @@ http.listen(PORT, () => {
 });
 
 // MongoDB
-mongoose.connect('mongodb://127.0.0.1:27017/tesseractcinema');
+// mongoose.connect('mongodb://127.0.0.1:27017/tesseractcinema');
 
-export const db: Connection = mongoose.connection;
-db.on('error', console.error.bind(console, 'connection error:'));
-db.once('open', function() {
-    console.log('Connected to MongoDB');
-});
+// export const db: Connection = mongoose.connection;
+// db.on('error', console.error.bind(console, 'connection error:'));
+// db.once('open', function() {
+//     console.log('Connected to MongoDB');
+// });
 
 // Socket.io
 

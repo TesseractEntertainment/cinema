@@ -1,6 +1,7 @@
 import React from "react";
-import { Broadcast } from "../util/interfaces";
+import { Broadcast } from "../util/broadcast";
 import { Dispatcher, DispatcherEvent } from "../util/dispatcher";
+import { UserFunctions } from "../util/user";
 
 export default function Broadcasts() {
     const [broadcasts, setBroadcasts] = React.useState<Broadcast[]>([]);
@@ -16,11 +17,11 @@ export default function Broadcasts() {
         {broadcasts && broadcasts.length > 0 ?
         <ul>
             {broadcasts.map((broadcast) => (
-                <li key={broadcast.roomId}>
+                <li key={broadcast.id}>
                     <h3>{broadcast.name}</h3>
-                    <p><strong>Room ID:</strong> {broadcast.roomId}</p>
-                    <p><strong>Broadcasters:</strong> {broadcast.broadcasters.map(user => user.name).join(', ')}</p>
-                    <p><strong>Listeners:</strong> {broadcast.listeners.map(user => user.name).join(', ')}</p>
+                    <p><strong>Room ID:</strong> {broadcast.id}</p>
+                    <p><strong>Broadcasters:</strong> {broadcast.broadcasterIds.map(userId => UserFunctions.getUser(userId)?.name).join(', ')}</p>
+                    <p><strong>Listeners:</strong> {broadcast.listenerIds.map(userId => UserFunctions.getUser(userId)?.name).join(', ')}</p>
                 </li>
             ))}
         </ul>

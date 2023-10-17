@@ -1,8 +1,13 @@
 import { Dispatcher, DispatcherEvent } from "./dispatcher";
-import { Broadcast } from "./interfaces";
-import {useState} from "react"
 
 var _broadcasts: Broadcast[] = [];
+
+export interface Broadcast {
+    id: string;
+    broadcasterIds: string[];
+    listenerIds: string[];
+    name: string;
+}
 
 /*
 * Sets the broadcasts state and dispatches the SET_BROADCAST_STATE event
@@ -27,14 +32,23 @@ export function addBroadcast(broadcast: Broadcast) {
     _setBroadcasts([..._broadcasts, broadcast]);
 }
 export function removeBroadcast(broadcastId: string) {
-    _setBroadcasts(_broadcasts.filter((broadcast) => broadcast.roomId !== broadcastId));
+    _setBroadcasts(_broadcasts.filter((broadcast) => broadcast.id !== broadcastId));
 }
 export function updateBroadcast(broadcastId: string, updatedBroadcast: Broadcast) {
-    _setBroadcasts(_broadcasts.map((broadcast) => broadcast.roomId === broadcastId ? updatedBroadcast : broadcast));
+    _setBroadcasts(_broadcasts.map((broadcast) => broadcast.id === broadcastId ? updatedBroadcast : broadcast));
 }
 export function getBroadcast(broadcastId: string) {
-    return _broadcasts.find((broadcast) => broadcast.roomId === broadcastId);
+    return _broadcasts.find((broadcast) => broadcast.id === broadcastId);
 }
 export function hasBroadcast(broadcastId: string) {
-    return _broadcasts.some((broadcast) => broadcast.roomId === broadcastId);
+    return _broadcasts.some((broadcast) => broadcast.id === broadcastId);
+}
+
+export function onUpdateBroadcasts(updatedBroadcasts: {_id: string; _broadcasterIds: string[], _listenerIds: string[], _name: string; }[]) {
+  setBroadcasts(updatedBroadcasts.map((broadcast) => ({
+    id: broadcast._id,
+    name: broadcast._name,
+    broadcasterIds: broadcast._broadcasterIds,
+    listenerIds: broadcast._listenerIds
+  })));
 }

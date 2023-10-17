@@ -1,33 +1,38 @@
 import React, { useEffect } from 'react';
-import { onAnswer, onConnect, onDisconnect, onDisconnectPeer, onIcecandidate, onOffer, onRequestStream, socket } from './util/connection';
+import { ConnectionEvents, socket } from './util/connection';
 import { Outlet } from 'react-router-dom';
-import { onUpdateUsers } from './util/users';
+import { UserEvents } from './util/user';
+import { SocketEvents } from './util/socketEvents';
 
 /*
   This is the root component of the application. It is responsible for setting up the socket listeners.
 */
 export default function App() {
   useEffect(() => {
-    socket.on('update-users', onUpdateUsers);
+    socket.on(SocketEvents.UPDATE_USERS, UserEvents.onUpdateUsers);
+    socket.on(SocketEvents.CREATE_USER, UserEvents.onUpdateUser);
+    socket.on(SocketEvents.DELETE_USER, UserEvents.onDeleteUser);
 
-    socket.on('disconnect-peer', onDisconnectPeer);
-    socket.on('request-stream', onRequestStream);    
-    socket.on('connect', onConnect);
-    socket.on('disconnect', onDisconnect);
-    socket.on('answer', onAnswer);
-    socket.on('offer', onOffer);
-    socket.on('ice-candidate', onIcecandidate);
+    socket.on(SocketEvents.DISCONNECT_PEER, ConnectionEvents.onDisconnectPeer);
+    socket.on(SocketEvents.REQUEST_STREAM, ConnectionEvents.onRequestStream);    
+    socket.on('connect', ConnectionEvents.onConnect);
+    socket.on('disconnect', ConnectionEvents.onDisconnect);
+    socket.on('answer', ConnectionEvents.onAnswer);
+    socket.on('offer', ConnectionEvents.onOffer);
+    socket.on('ice-candidate', ConnectionEvents.onIcecandidate);
 
     return () => {
-      socket.off('update-users', onUpdateUsers);
+      socket.off(SocketEvents.UPDATE_USERS, UserEvents.onUpdateUsers);
+      socket.off(SocketEvents.CREATE_USER, UserEvents.onUpdateUser);
+      socket.off(SocketEvents.DELETE_USER, UserEvents.onDeleteUser);
 
-      socket.off('disconnect-peer', onDisconnectPeer);
-      socket.off('request-stream', onRequestStream);      
-      socket.off('connect', onConnect);
-      socket.off('disconnect', onDisconnect);
-      socket.off('answer', onAnswer);
-      socket.off('offer', onOffer);
-      socket.off('ice-candidate', onIcecandidate);
+      socket.off(SocketEvents.DISCONNECT_PEER, ConnectionEvents.onDisconnectPeer);
+      socket.off(SocketEvents.REQUEST_STREAM, ConnectionEvents.onRequestStream);      
+      socket.off('connect', ConnectionEvents.onConnect);
+      socket.off('disconnect', ConnectionEvents.onDisconnect);
+      socket.off('answer', ConnectionEvents.onAnswer);
+      socket.off('offer', ConnectionEvents.onOffer);
+      socket.off('ice-candidate', ConnectionEvents.onIcecandidate);
     };
   }, []);
 

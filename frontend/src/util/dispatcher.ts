@@ -73,6 +73,8 @@ function dispatch (event: string, details: any) {
     }   events.get(event)!.forEach((listener) => {
         listener(details);
     });
+    console.log(`Dispatched event: ${event}`);
+    console.log(details);
 }
 
 /*
