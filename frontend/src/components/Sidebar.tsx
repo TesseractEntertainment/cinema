@@ -1,5 +1,5 @@
 import React from "react";
-import Broadcasts from "./Broadcasts";
+import Broadcasts from "./BroadcastList";
 
 const Sidebar: React.FC = () => {
     return (
