@@ -3,6 +3,7 @@ interface Dispatcher {
     addListener(event: string, callback: Function): void;
     removeListener(event: string, callback: Function): void;
     dispatch(event: string, details: any): void;
+    withTimeout(onSuccess: Function, onTimeout: Function, timeout: number): Function;
 }
 
 /*
@@ -77,11 +78,30 @@ function dispatch (event: string, details: any) {
     console.log(details);
 }
 
+// TODO:?
+const withTimeout = (onSuccess: Function, onTimeout: Function, timeout: number) => {
+    let called = false;
+  
+    const timer = setTimeout(() => {
+      if (called) return;
+      called = true;
+      onTimeout();
+    }, timeout);
+  
+    return (...args: any[]) => {
+      if (called) return;
+      called = true;
+      clearTimeout(timer);
+      onSuccess.apply(this, args);
+    }
+  }
+
 /*
 * A simple event dispatcher
 */
 export const Dispatcher: Dispatcher = {
     addListener,
     removeListener,
-    dispatch
+    dispatch,
+    withTimeout,
 };

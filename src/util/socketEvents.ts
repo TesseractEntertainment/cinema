@@ -1,10 +1,16 @@
+/* Callbacks are used to pass data from the server to the client
+* @callback SocketCallback
+* @param {any} data - The data or error
+* @param {boolean} success = true - Whether the request was successful
+*/
+
 enum Broadcast {
     // INCOMING
     REQUEST_LISTEN = 'broadcast-request-listen', // (broadcastId: string)
     REQUEST_BROADCAST = 'broadcast-request-broadcast', // (broadcastId: string)
     REQUEST_LEAVE = 'broadcast-request-leave', // (broadcastId: string)
     REQUEST_TERMINATE = 'broadcast-request-terminate', // (broadcastId: string)
-    REQUEST_CREATE = 'broadcast-request-create', // (name: string)
+    REQUEST_CREATE = 'broadcast-request-create', // (name: string, callback: (id: string, success = true) => void
     REQUEST_UPDATE = 'broadcast-request-update', // (broadcast: Broadcast)
 
     // OUTGOING

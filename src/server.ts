@@ -43,8 +43,9 @@ io.on('connection', (socket) => {
     socket.on(SocketEvents.Broadcast.REQUEST_TERMINATE, (broadcastId) => {
         BroadcastFunctions.terminateBroadcast(broadcastId);
     });
-    socket.on(SocketEvents.Broadcast.REQUEST_CREATE, (name) => {
-        BroadcastFunctions.createBroadcast(name);
+    socket.on(SocketEvents.Broadcast.REQUEST_CREATE, (name, callback) => {
+        const id = BroadcastFunctions.createBroadcast(name).id;
+        if (callback) callback(id);
     });
     socket.on(SocketEvents.Broadcast.REQUEST_UPDATE, (broadcast) => {
         BroadcastFunctions.updateBroadcast(broadcast);

@@ -9,6 +9,33 @@ const URL: any = process.env.NODE_ENV === 'production' ? undefined : 'http://loc
 */
 export const socket = io(URL);
 
+/*
+* Emits an event to the server and returns a promise that resolves when the server responds with a success message
+* @param {string} event - The event name
+* @param {number} timeoutMs - The timeout in milliseconds (0 means no timeout)
+* @param {any[]} data - The event data
+* @returns {Promise<any>} - A promise that resolves when the server responds with a success message
+*/
+export function emitEventWithAcknowledgment(event: string, timeoutMs: number, ...data: any[]): Promise<any> {
+  return new Promise((resolve, reject) => {
+    socket.emit(event, data, (response: any, success: boolean = true) => {
+      if (success) {
+        resolve(response);
+      }
+      else {
+        reject(new Error(response));
+      }
+    });
+
+    if (timeoutMs > 0) {
+      // Timeout logic
+      setTimeout(() => {
+          reject(new Error("Timeout waiting for acknowledgment"));
+      }, timeoutMs);
+    }
+  });
+}
+
 var _isConnected: boolean = false;
 const _peerConnections: Map<string, PeerConnection> = new Map();
 

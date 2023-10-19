@@ -1,13 +1,11 @@
 enum Broadcast {
-    // INCOMING
     REQUEST_LISTEN = 'broadcast-request-listen', // (broadcastId: string)
     REQUEST_BROADCAST = 'broadcast-request-broadcast', // (broadcastId: string)
     REQUEST_LEAVE = 'broadcast-request-leave', // (broadcastId: string)
     REQUEST_TERMINATE = 'broadcast-request-terminate', // (broadcastId: string)
-    REQUEST_CREATE = 'broadcast-request-create', // (name: string)
+    REQUEST_CREATE = 'broadcast-request-create', // (name: string, callback: (id: string, success = true) => void
     REQUEST_UPDATE = 'broadcast-request-update', // (broadcast: Broadcast)
 
-    // OUTGOING
     // Notifications
     LISTENER_JOINED = 'broadcast-listener-joined', // (broadcastId: string, userId: string)
     BROADCASTER_JOINED = 'broadcast-broadcaster-joined', // (broadcastId: string, userId: string)
@@ -24,7 +22,6 @@ enum Broadcast {
 }
 
 enum User {
-    // INCOMING
     REQUEST_CREATE = 'user-request-create', // (name: string)
     REQUEST_UPDATE = 'user-request-update', // (user: User)
     REQUEST_DELETE = 'user-request-delete', // (id: string)

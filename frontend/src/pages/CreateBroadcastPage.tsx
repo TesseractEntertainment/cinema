@@ -7,14 +7,19 @@ function CreateBroadcastPage() {
   const navigate = useNavigate();
   const [broadcastName, setBroadcastName] = useState('');
 
-  const handleCreateBroadcast = (e: any) => {
+  const handleCreateBroadcast = async (e: any) => {
     e.preventDefault();
     // Logic to create a new broadcast using the provided name
     console.log('Creating broadcast with name:', broadcastName);
-    BroadcastFunctions.create(broadcastName);
+    try{
+      const id = await BroadcastFunctions.create(broadcastName);
+      navigate('/broadcast/' + id);
+    }
+    catch(err){
+      console.log(err);
+    }
     // redirect to the new broadcast page
     // TODO: Add actual redirect logic
-    navigate('/');
   };
 
   return (

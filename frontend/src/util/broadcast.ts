@@ -1,6 +1,5 @@
-import { io } from "socket.io-client";
 import { Dispatcher, DispatcherEvent } from "./dispatcher";
-import { socket } from "./connection";
+import { socket, emitEventWithAcknowledgment } from "./connection";
 import { SocketEvents } from "./socketEvents";
 
 var _broadcasts: Broadcast[] = [];
@@ -43,10 +42,16 @@ function getBroadcast(broadcastId: string) {
 function hasBroadcast(broadcastId: string) {
     return _broadcasts.some((broadcast) => broadcast.id === broadcastId);
 }
-// TODO: return new broadcast id
-function create(name: string) {
-    socket.emit(SocketEvents.Broadcast.REQUEST_CREATE, name);
+
+/*
+* Requests the server to create a broadcast
+* @param {string} name - The broadcast name
+* @returns {Promise<string>} - The broadcast id
+*/
+async function create(name: string): Promise<string> {
+    return emitEventWithAcknowledgment(SocketEvents.Broadcast.REQUEST_CREATE, 10000, name);
 }
+        
 function terminate(broadcastId: string) {
     socket.emit(SocketEvents.Broadcast.REQUEST_TERMINATE, broadcastId);
 }

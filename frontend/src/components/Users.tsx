@@ -1,7 +1,7 @@
 import React, { useEffect, useReducer, useState } from 'react';
 import { ConnectionFunctions, PeerConnection } from '../util/connection';
 import { Dispatcher, DispatcherEvent } from '../util/dispatcher';
-import { User } from '../util/user';
+import { User, UserFunctions } from '../util/user';
 import '../styles/user.css';
 
 interface ConnectionButtonProps {
@@ -33,7 +33,7 @@ function onStreamTo(userId: string) {
 }
 
 export function Users() {
-  const [users, setUsers] = useState<User[]>([]);
+  const [users, setUsers] = useState<User[]>(UserFunctions.getUsers());
   const [, forceUpdate] = useReducer(x => x + 1, 0);
 //   const peerConnections = ConnectionFunctions.getPeerConnections();
   useEffect(() => {
