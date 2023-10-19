@@ -3,7 +3,7 @@ import Broadcasts from "./BroadcastList";
 
 const Sidebar: React.FC = () => {
     return (
-        <div className="sidebar">
+        <div className="sb-container">
             <Broadcasts />
         </div>
     );

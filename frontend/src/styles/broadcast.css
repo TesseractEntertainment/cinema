@@ -1,0 +1,131 @@
+/* Create Broadcast */
+.create-broadcast-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+  }
+  
+  .create-broadcast-form {
+    width: 300px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+  }
+  
+  .create-broadcast-form label {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+  
+  .create-broadcast-form input {
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+  }
+  
+  .create-broadcast-form button {
+    padding: 10px 15px;
+    background-color: #007BFF;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+  }
+  
+  .create-broadcast-form button:hover {
+    background-color: #0056b3;
+  }
+  
+  /* BroadcastList  */
+  .broadcast-list-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  }
+
+  .broadcast-list {
+    overflow-y: auto;
+    flex: 1;
+  }
+
+  .broadcast-list a {
+    text-decoration: none;
+  }
+
+  .broadcast-list ul {
+    width: 100%;
+    margin-top: 0px;
+  }
+  
+  .broadcast-list li {
+    padding: 0px;
+  }
+  
+  .broadcast-item:last-child {
+    margin-bottom: 0;
+  }
+  
+  .broadcast-item-name {
+    flex: 1;
+  }
+  
+  .broadcast-item-actions {
+    display: flex;
+    gap: 10px;
+  }
+
+/* Broadcast page */
+.broadcast-page-container {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.broadcast-details {
+  margin-top: 20px;
+  padding: 10px;
+  border: 1px solid #ccc;
+  width: 100%;
+  max-width: 600px;
+}
+
+.broadcast-details ul {
+  list-style-type: none;
+  padding: 0;
+}
+
+.broadcast-actions {
+  margin-top: 20px;
+  display: flex;
+  gap: 10px;
+}
+
+.edit-button, .delete-button {
+  padding: 8px 12px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.edit-button {
+  background-color: #007BFF;
+  color: white;
+}
+
+.delete-button {
+  background-color: #dc3545;
+  color: white;
+}
+
+.edit-button:hover {
+  background-color: #0056b3;
+}
+
+.delete-button:hover {
+  background-color: #c82333;
+}

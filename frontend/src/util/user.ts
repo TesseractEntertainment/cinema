@@ -50,7 +50,7 @@ function hasUser(userId: string) {
     return _users.some((user) => user.id === userId);
 }
 
-function onUpdateUsers(updatedUsers: {_socketId: string; _name: string; }[]) {
+function onUsers(updatedUsers: {_socketId: string; _name: string; }[]) {
   var userIds: string[] = [];
   if(updatedUsers.length > 0) {
     userIds = updatedUsers.map((user: { _socketId: string; }) => user._socketId);
@@ -70,7 +70,7 @@ function onUpdateUsers(updatedUsers: {_socketId: string; _name: string; }[]) {
   console.log('updated users: ', updatedUsers);
 }
 
-function onUpdateUser( updatedUser: { _socketId: string; _name: string; }) {
+function onUpdate( updatedUser: { _socketId: string; _name: string; }) {
   const peerConnections = ConnectionFunctions.getPeerConnections();
   updateUser(updatedUser._socketId, {
     id: updatedUser._socketId,
@@ -80,14 +80,24 @@ function onUpdateUser( updatedUser: { _socketId: string; _name: string; }) {
   console.log('updated user: ', updatedUser);
 }
 
-function onDeleteUser(id: string) {
+function onDelete(id: string) {
   const user = getUser(id);
   removeUser(id);
   console.log('deleted user: ', user?.name);
 }
 
-export const UserFunctions = { setUsers, getUsers, addUser, removeUser, updateUser, updateConnectionState, getUser, hasUser };
-export const UserEvents = { onDeleteUser,
-  onUpdateUser,
-  onUpdateUsers,
+export const UserFunctions = { 
+  setUsers, 
+  getUsers,
+  addUser,
+  removeUser,
+  updateUser,
+  updateConnectionState,
+  getUser,
+  hasUser,
+};
+export const UserEvents = { 
+  onDelete,
+  onUpdate,
+  onUsers,
 };

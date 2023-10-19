@@ -2,7 +2,7 @@ import React, { useEffect, useReducer, useState } from 'react';
 import { ConnectionFunctions, PeerConnection } from '../util/connection';
 import { Dispatcher, DispatcherEvent } from '../util/dispatcher';
 import { User } from '../util/user';
-import '../styles/users.css';
+import '../styles/user.css';
 
 interface ConnectionButtonProps {
     user: User;

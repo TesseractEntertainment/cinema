@@ -6,14 +6,61 @@
 
 .top-bar {
   height: 60px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  padding: 0px;
+}
+
+.tb-container {
+  height: 100%;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 20px;
+  box-sizing: border-box;
+  padding: 1px 20px 1px 20px;
   background-color: #333;
   color: #fff;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  width: 100%;
 }
+
+.tb-container a {
+  color: #fff;
+  text-decoration: none;
+}
+
+.menu-icon {
+  width: 25px;
+  height: 25px; /* Adjusted height to accommodate all three lines */
+  position: relative;
+  margin: 6px 0;
+}
+
+.menu-icon::before,
+.menu-icon::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  width: 25px;
+  height: 3px;
+  background-color: white;
+}
+
+.menu-icon::before {
+  top: 0;
+}
+
+.menu-icon::after {
+  bottom: 0;
+}
+
+.menu-icon > div {
+  width: 25px;
+  height: 3px;
+  background-color: white;
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
 
 .content-wrapper {
   display: flex;
@@ -24,10 +71,56 @@
 .sidebar {
   width: 200px;
   background-color: #f4f4f4;
-  overflow-y: auto;
   border-right: 1px solid #e0e0e0;
-  padding: 5px;
+  height: 100%;
+  box-sizing: border-box;
 }
+
+.sb-container {
+  padding: 10px;
+  border-right: 1px solid #e0e0e0;
+  height: 100%;
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+
+.sidebar h2 {
+  font-size: 24px;
+  margin-bottom: 20px;
+  color: #333;
+}
+
+.sidebar ul {
+  list-style-type: none;
+  padding: 0;
+}
+
+.sidebar li {
+  padding: 10px;
+  border-bottom: 1px solid #e0e0e0;
+  margin-bottom: 10px;
+}
+
+.sidebar li:last-child {
+  border-bottom: none;
+}
+
+.sidebar h3 {
+  font-size: 20px;
+  color: #444;
+  margin-top: 0;
+}
+
+.sidebar p {
+  font-size: 14px;
+  color: #666;
+  margin: 5px 0;
+}
+
+.sidebar p strong {
+  color: #333;
+}
+
 
 .main-view {
   flex: 1;

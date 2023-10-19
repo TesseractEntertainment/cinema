@@ -6,6 +6,8 @@ import reportWebVitals from './reportWebVitals';
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import Layout from './components/Layout.tsx';
 import { ErrorPage, LandingPage } from './pages';
+import CreateBroadcastPage from './pages/CreateBroadcastPage.tsx';
+import BroadcastPage, { loader as broadcastLoader } from './pages/BroadcastPage.tsx';
 
 const router = createBrowserRouter([
   {
@@ -16,7 +18,9 @@ const router = createBrowserRouter([
       {
         element: <Layout title='Tesseract'/>,
         children: [
-          { index: true, element: <LandingPage />}
+          { index: true, element: <LandingPage />},
+          { path: "create-broadcast", element: <CreateBroadcastPage />},
+          { path: "broadcast/:id", element: <BroadcastPage />, loader: broadcastLoader}
         ]
       },
     ],

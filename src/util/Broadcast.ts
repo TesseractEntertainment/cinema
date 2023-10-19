@@ -118,31 +118,37 @@ export class Broadcast {
 
 // Socket events
 function sendUpdatedBroadcasts() {
-    io.emit(SocketEvents.UPDATE_BROADCASTS, Array.from(broadcasts.values()));
+    io.emit(SocketEvents.Broadcast.BROADCASTS, Array.from(broadcasts.values()));
 }
 
 function sendUpdatedBroadcastsTo(id: string) {
-    UserFunctions.getUser(id)?.getSocket()?.emit(SocketEvents.UPDATE_BROADCASTS, Array.from(broadcasts.values()));
+    UserFunctions.getUser(id)?.getSocket()?.emit(SocketEvents.Broadcast.BROADCASTS, Array.from(broadcasts.values()));
 }
 
 function sendUpdatedBroadcast(broadcast: Broadcast) {
-    io.emit(SocketEvents.UPDATE_BROADCAST, broadcast);
+    io.emit(SocketEvents.Broadcast.UPDATED, broadcast);
 }
 
 function sendCreatedBroadcast(broadcast: Broadcast) {
-    io.emit(SocketEvents.CREATE_BROADCAST, broadcast);
+    console.log('sent event')
+    io.emit(SocketEvents.Broadcast.CREATED, broadcast);
 }
 
 function sendTerminatedBroadcast(id: string) {
-    io.emit(SocketEvents.TERMINATE_BROADCAST, id);
+    io.emit(SocketEvents.Broadcast.TERMINATED, id);
 }
 
 function sendJoinedBroadcast(userId: string, broadcastId: string, isBroadcaster = false) {
-    io.to(userId).emit(SocketEvents.JOIN_BROADCAST, broadcastId, isBroadcaster);
+    io.to(userId).emit(isBroadcaster ? SocketEvents.Broadcast.BROADCASTER_JOINED : SocketEvents.Broadcast.LISTENER_JOINED, broadcastId, userId);
 }
 
 function sendLeftBroadcast(userId: string, broadcastId: string) {
-    io.to(userId).emit(SocketEvents.LEAVE_BROADCAST, broadcastId);
+    if (broadcasts.get(broadcastId)?.broadcasters.includes(userId)) {
+        io.to(userId).emit(SocketEvents.Broadcast.BROADCASTER_LEFT, broadcastId, userId);
+    } 
+    if (broadcasts.get(broadcastId)?.listeners.includes(userId)) {
+        io.to(userId).emit(SocketEvents.Broadcast.LISTENER_LEFT, broadcastId, userId);
+    }
 }
 
 /*

@@ -1,8 +1,8 @@
 import React from 'react';
-import Logo from './Logo';
 import '../styles/layout.css';
 import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
+import Topbar from './Topbar';
 
 interface LayoutProps {
   title: string;
@@ -17,8 +17,7 @@ const Layout: React.FC<LayoutProps> = ({ title, children }) => {
   return (
     <div className="layout-container">
       <div className="top-bar">
-        <Logo />
-        <h1>{title}</h1>
+        <Topbar title={title} />
       </div>
       <div className='content-wrapper'>
         <div className="sidebar">

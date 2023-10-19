@@ -9,8 +9,8 @@ export class User {
     private _socketId: string 
     private _name: string;
 
-    constructor(socket: Socket, name?: string) {
-        this._socketId = socket.id;
+    constructor(socketId: string, name?: string) {
+        this._socketId = socketId;
         this._name = name ? name : this._socketId;
     }
 
@@ -42,32 +42,32 @@ export class User {
 }
 
 function sendUpdatedUsers() {
-    io.emit(SocketEvents.UPDATE_USERS, Array.from(users.values()));
+    io.emit(SocketEvents.User.USERS, Array.from(users.values()));
 }
 
 function sendUpdatedUsersTo(id: string) {
-    getUser(id)?.getSocket()?.emit(SocketEvents.UPDATE_USERS, Array.from(users.values()));
+    getUser(id)?.getSocket()?.emit(SocketEvents.User.USERS, Array.from(users.values()));
 }
 
 function sendUpdatedUser(user: User) {
-    io.emit(SocketEvents.UPDATE_USER, user);
+    io.emit(SocketEvents.User.UPDATED, user);
 }
 
 function sendCreatedUser(user: User) {
-    io.emit(SocketEvents.CREATE_USER, user);
+    io.emit(SocketEvents.User.CREATED, user);
 }
 
-function sendAddedUser(user: User) {
-    io.emit(SocketEvents.ADD_USER, user);
-}
+// function sendAddedUser(user: User) {
+//     io.emit(SocketEvents.ADD_USER, user);
+// }
 
 function sendDeletedUser(id: string) {
-    io.emit(SocketEvents.DELETE_USER, id);
+    io.emit(SocketEvents.User.DELETED, id);
 }
 
-function sendRemovedUser(id: string) {
-    io.emit(SocketEvents.REMOVE_USER, id);
-}
+// function sendRemovedUser(id: string) {
+//     io.emit(SocketEvents.REMOVE_USER, id);
+// }
 
 function getUsers(): Map<string, User> {
     return new Map(users);
@@ -87,19 +87,19 @@ function setUser(user: User) {
 * Does not update socketId
 * @param {User} updatedUser - The updated user
 */
-function updateUser(updatedUser: User): boolean{
-    const user = users.get(updatedUser.id);
+function updateUser(userId: string, name: string): boolean{
+    const user = users.get(userId);
     if (!user) {
         return false;
     }
-    user.name = updatedUser.name;
+    user.name = name;
     sendUpdatedUser(user);
     return true;
 }
 
-function createUser(socket: Socket, name?: string) {
-    const user = new User(socket, name);
-    users.set(socket.id, user);
+function createUser(socketId: string, name?: string) {
+    const user = new User(socketId, name);
+    users.set(socketId, user);
     sendCreatedUser(user);
     console.log('a user was created: ', user.name);
     return user;
