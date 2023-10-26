@@ -1,42 +1,78 @@
-import { io } from 'socket.io-client';
+import socket from '../socket';
+import { Dispatcher, DispatcherEvents } from './dispatcher';
+import { onError } from '../App';
 import { updateConnectionState } from './user';
-import { Dispatcher, DispatcherEvent } from './dispatcher';
+import { SocketEvents } from '../common/socketEvents';
+import { sleep } from './functions';
 
-// "undefined" means the URL will be computed from the `window.location` object
-const URL: any = process.env.NODE_ENV === 'production' ? undefined : 'http://localhost:4000';
-/*
-* The socket object that is used to connect to the server.
-*/
-export const socket = io(URL);
+socket.on('connect', onConnect);
+socket.on('disconnect', onDisconnect);
+socket.connect();
 
-/*
+socket.on(SocketEvents.Signaling.DISCONNECTED, onDisconnectPeer);
+socket.on(SocketEvents.Signaling.REQUESTED_AUDIO, onRequestStream);
+// TODO: implement remaining events
+socket.on(SocketEvents.Signaling.ANSWER, onAnswer);
+socket.on(SocketEvents.Signaling.OFFER, onOffer);
+socket.on(SocketEvents.Signaling.ICE_CANDIDATE, onIcecandidate);
+    
+
+function onConnect() {
+  console.log('registered');
+  console.log('connected to server');
+  setConnected(true);
+  // BroadcastFunctions.requestBroadcasts();
+  // UserFunctions.requestUsers();
+}
+
+function onDisconnect() {
+  setConnected(false);
+}
+
+/**
 * Emits an event to the server and returns a promise that resolves when the server responds with a success message
 * @param {string} event - The event name
 * @param {number} timeoutMs - The timeout in milliseconds (0 means no timeout)
 * @param {any[]} data - The event data
 * @returns {Promise<any>} - A promise that resolves when the server responds with a success message
 */
-export function emitEventWithAcknowledgment(event: string, timeoutMs: number, ...data: any[]): Promise<any> {
+export function emitEventUnhandled(event: string, timeoutMs: number = 0, ...data: any[]): Promise<any> {
   return new Promise((resolve, reject) => {
-    socket.emit(event, data, (response: any, success: boolean = true) => {
+    socket.emit(event, ...data, (response: any, success: boolean = true) => {
       if (success) {
         resolve(response);
       }
       else {
-        reject(new Error(response));
+        reject(response);
       }
     });
 
     if (timeoutMs > 0) {
       // Timeout logic
       setTimeout(() => {
-          reject(new Error("Timeout waiting for acknowledgment"));
+          reject("Timeout waiting for acknowledgment");
       }, timeoutMs);
     }
   });
 }
 
-var _isConnected: boolean = false;
+export async function emitEvent(event: string, ...data: any[]): Promise<any> {
+  try {
+    return await emitEventUnhandled(event, 5000, ...data);
+  } catch (error) {
+    onError(event, error);
+  }
+}
+
+export async function emitEventWithTimeout(event: string, timeoutMs: number, ...data: any[]): Promise<any> {
+  try {
+    return await emitEventUnhandled(event, timeoutMs, ...data);
+  } catch (error) {
+    onError(error);
+  }
+}
+
+
 const _peerConnections: Map<string, PeerConnection> = new Map();
 
 export interface PeerConnection extends RTCPeerConnection {
@@ -65,12 +101,11 @@ export enum PeerConnectionState {
 * @returns {boolean} - true if the socket is connected, false otherwise
 */
 function isConnected() {
-    return _isConnected;
+    return socket.connected;
 }
 
 function setConnected(connected: boolean) {
-    _isConnected = connected;
-    Dispatcher.dispatch(DispatcherEvent.SET_CONNECTION_STATE, connected);
+    Dispatcher.dispatch(DispatcherEvents.SET_CONNECTION_STATE, connected);
 }
 
 /*
@@ -84,7 +119,7 @@ function getPeerConnections() {
 function onICECandidate(event: RTCPeerConnectionIceEvent) {
     if (event.candidate) {
       console.log('new ICE candidate');
-      socket.emit('ice-candidate', event.candidate, (event.target as PeerConnection).id);
+      emitEvent('ice-candidate', event.candidate, (event.target as PeerConnection).id);
     }
   }
 
@@ -101,7 +136,7 @@ async function onNegotiationNeeded(event: Event) {
     try {
       const offer = await _peerConnections.get(peerConnection.id)!.createOffer();
       await _peerConnections.get(peerConnection.id)!.setLocalDescription(offer);
-      socket.emit('offer', offer, peerConnection.id);
+      emitEvent('offer', offer, peerConnection.id);
     } catch (error) {
       console.error("Error creating offer:", error);
     }
@@ -182,7 +217,7 @@ function createPeerConnection(userId: string) {
 */
 function disconnectPeer(userId: string) {
   console.log('disconnecting from ', userId);
-  socket.emit('disconnect-peer', userId);
+  emitEvent('disconnect-peer', userId);
   closePeerConnection(userId);
 }
 
@@ -230,7 +265,7 @@ function closePeerConnection(userId: string) {
 
 function requestStream(userId: string) {
   console.log('requesting stream from ', userId);
-  socket.emit('request-stream', userId);
+  emitEvent('request-stream', userId);
 }
 
 // TODO
@@ -275,15 +310,6 @@ function onDisconnectPeer(userId: string) {
   closePeerConnection(userId);
 }
 
-// Socket event handlers
-function onConnect() {
-  setConnected(true);
-}
-
-function onDisconnect() {
-  setConnected(false);
-}
-
 // WebRTC event handlers
 async function onAnswer(answer: any, userId: string) {
   console.log('received answer from ', userId);
@@ -306,7 +332,7 @@ async function onOffer(offer: any, userId: string) {
   const ans = await peerConnection!.createAnswer();
   await peerConnection!.setLocalDescription(ans);
   
-  socket.emit('answer', ans, userId);
+  emitEvent('answer', ans, userId);
 }
 
 async function onIcecandidate(candidate: any, userId: string) {

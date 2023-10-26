@@ -1,21 +1,35 @@
 import React from 'react';
 import { Broadcast, BroadcastFunctions } from '../util/broadcast';
 import { UserFunctions } from '../util/user';
-import { redirect, useLoaderData, useNavigate } from 'react-router-dom';
+import { useLoaderData, useNavigate } from 'react-router-dom';
+import { Dispatcher, DispatcherEvents } from '../util/dispatcher';
 
-export function loader({params: {id}}: {params: {id: string}}) {
-    const broadcast = BroadcastFunctions.getBroadcast(id);
-    return {broadcast};
-  }
+export async function loader({params: {id}}: {params: {id: string}}) {
+  const broadcast = await BroadcastFunctions.getBroadcastAsync(id);
+  console.log('Broadcast data loaded:', broadcast);
+  return {broadcast};
+}
 
 export default function BroadcastPage() {
     const navigate = useNavigate();
-    const {broadcast} = useLoaderData() as {broadcast: Broadcast | undefined};
-    if (!broadcast) {
-        return (
-            <h2>Broadcast not found</h2>
-        );
-    }
+    const data = useLoaderData() as {broadcast: Broadcast};
+    const [broadcast, setBroadcast] = React.useState<Broadcast>(data.broadcast);
+
+    React.useEffect(() => {
+      setBroadcast(data.broadcast);
+      console.log('BroadcastPage useEffect');
+      Dispatcher.addListener(DispatcherEvents.SET_BROADCAST_STATE + data.broadcast.id, setBroadcast);
+      return () => {
+        Dispatcher.removeListener(DispatcherEvents.SET_BROADCAST_STATE + data.broadcast.id, setBroadcast);
+      };
+    }, [data.broadcast]);
+
+    // if (!broadcast) {
+    //     return (
+    //         <h2>Broadcast not found</h2>
+    //     );
+    // }
+
     const handleDelete = () => {
     const confirmation = window.confirm('Are you sure you want to delete this broadcast?');
     if (confirmation) {
@@ -26,8 +40,7 @@ export default function BroadcastPage() {
   };
 
   const handleEdit = () => {
-    // Logic to edit the broadcast
-    console.log('Edit broadcast:', broadcast?.name);
+    console.log('Edit broadcast:', broadcast.name);
     // TODO: Add actual broadcast editing logic
   };
 
@@ -46,7 +59,7 @@ export default function BroadcastPage() {
       <div className="broadcast-details">
         <h3>Room ID</h3>
         <p>{broadcast.id}</p>
-        <h3>Listeners</h3>
+        <h3>Listeners: {broadcast.listenerIds.length}</h3>
         <ul>
           {broadcast.listenerIds.map(listenerId => (
             <li key={listenerId}>{UserFunctions.getUser(listenerId)?.name}</li>
@@ -63,6 +76,7 @@ export default function BroadcastPage() {
         <button onClick={handleEdit} className="edit-button">Edit</button>
         <button onClick={handleDelete} className="delete-button">Delete</button>
         <button onClick={handleJoin} className="join-button">Join</button>
+        <button onClick={handleLeave} className="leave-button">Leave</button>
       </div>
     </div>
   );

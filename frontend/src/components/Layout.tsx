@@ -3,6 +3,7 @@ import '../styles/layout.css';
 import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Topbar from './Topbar';
+import ErrorComponent from './Error';
 
 interface LayoutProps {
   title: string;
@@ -24,6 +25,9 @@ const Layout: React.FC<LayoutProps> = ({ title, children }) => {
           <Sidebar />
         </div>
         <div className="main-view">
+          <div className="error-container">
+            <ErrorComponent />
+          </div>
           {children}
           <Outlet />
         </div>

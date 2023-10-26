@@ -1,7 +1,20 @@
-import { ConnectionFunctions, PeerConnectionState } from "./connection";
-import { Dispatcher, DispatcherEvent } from "./dispatcher";
+import socket from '../socket';
+import { SocketEvents } from '../../../frontend/src/common/socketEvents';
+import { ConnectionFunctions, PeerConnectionState, emitEvent } from "./connection";
+import { Dispatcher, DispatcherEvents } from "./dispatcher";
 
 var _users: User[] = [];
+
+socket.on('connect', onConnect);
+socket.on(SocketEvents.User.USERS, onUsers);
+socket.on(SocketEvents.User.CREATED, onUpdate);
+socket.on(SocketEvents.User.DELETED, onDelete);
+socket.on(SocketEvents.User.UPDATED, onUpdate);
+
+function onConnect() {
+  console.log('Connected: requesting users');
+    requestUsers();
+}
 
 export interface User {
   id: string;
@@ -16,7 +29,7 @@ export interface User {
 function setUsers(users: User[]) {
   console.log('set users: ', users);
     _users = users;
-    Dispatcher.dispatch(DispatcherEvent.SET_USER_STATE, users);
+    Dispatcher.dispatch(DispatcherEvents.SET_USER_STATE, users);
 }
 
 /*
@@ -48,6 +61,10 @@ function getUser(userId: string) {
 }
 function hasUser(userId: string) {
     return _users.some((user) => user.id === userId);
+}
+
+function requestUsers() {
+  emitEvent(SocketEvents.User.REQUEST_USERS);
 }
 
 function onUsers(updatedUsers: {_socketId: string; _name: string; }[]) {
@@ -95,6 +112,7 @@ export const UserFunctions = {
   updateConnectionState,
   getUser,
   hasUser,
+  requestUsers,
 };
 export const UserEvents = { 
   onDelete,

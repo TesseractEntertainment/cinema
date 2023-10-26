@@ -1,8 +1,23 @@
-import { Dispatcher, DispatcherEvent } from "./dispatcher";
-import { socket, emitEventWithAcknowledgment } from "./connection";
-import { SocketEvents } from "./socketEvents";
+import socket from "../socket";
+import { Dispatcher, DispatcherEvents } from "./dispatcher";
+import { emitEventUnhandled, emitEvent } from "./connection";
+import { SocketEvents } from '../common/socketEvents';
 
 var _broadcasts: Broadcast[] = [];
+
+socket.on('connect', onConnect);
+socket.on(SocketEvents.Broadcast.LISTENER_JOINED, onListenerJoin);
+socket.on(SocketEvents.Broadcast.LISTENER_LEFT, onListenerLeave);
+socket.on(SocketEvents.Broadcast.CREATED, onCreate);
+socket.on(SocketEvents.Broadcast.TERMINATED, onTerminate);
+socket.on(SocketEvents.Broadcast.UPDATED, onUpdate);
+socket.on(SocketEvents.Broadcast.BROADCASTS, onBroadcasts);
+
+
+function onConnect() {
+    console.log('Connected: requesting broadcasts');
+    requestBroadcasts();
+}
 
 export interface Broadcast {
     id: string;
@@ -17,15 +32,17 @@ export interface Broadcast {
 */
 function _setBroadcasts(broadcasts: Broadcast[]) {
     _broadcasts = broadcasts;
-    Dispatcher.dispatch(DispatcherEvent.SET_BROADCAST_STATE, broadcasts);
+    Dispatcher.dispatch(DispatcherEvents.SET_BROADCASTS_STATE, broadcasts);
 }
 function _addBroadcast(broadcast: Broadcast) {
     _setBroadcasts([..._broadcasts, broadcast]);
 }
 function _removeBroadcast(broadcastId: string) {
     _setBroadcasts(_broadcasts.filter((broadcast) => broadcast.id !== broadcastId));
+    Dispatcher.dispatch(DispatcherEvents.SET_BROADCAST_STATE + broadcastId, undefined);
 }
 function _updateBroadcast(broadcastId: string, updatedBroadcast: Broadcast) {
+    Dispatcher.dispatch(DispatcherEvents.SET_BROADCAST_STATE + broadcastId, updatedBroadcast);
     _setBroadcasts(_broadcasts.map((broadcast) => broadcast.id === broadcastId ? updatedBroadcast : broadcast));
 }
 
@@ -36,11 +53,25 @@ function _updateBroadcast(broadcastId: string, updatedBroadcast: Broadcast) {
 function getBroadcasts() {
     return _broadcasts;
 }
-function getBroadcast(broadcastId: string) {
-    return _broadcasts.find((broadcast) => broadcast.id === broadcastId);
+
+/**
+* Returns a broadcast. If it's not cached, requests the server to get the broadcast.
+* @param {string} broadcastId - The broadcast id
+* @returns {Promise<Broadcast>} - The broadcast
+* @throws {Error} - If the broadcast was not found
+*/
+async function getBroadcastAsync(broadcastId: string): Promise<Broadcast> {
+    var broadcast = _broadcasts.find((broadcast) => broadcast.id === broadcastId);
+    if(broadcast) return broadcast;
+    const serverBroadcast = await emitEvent(SocketEvents.Broadcast.GET_BROADCAST, broadcastId);
+    if(!serverBroadcast) throw new Error(`Broadcast ${broadcastId} not found`);
+    return serverBroadcast;
 }
-function hasBroadcast(broadcastId: string) {
-    return _broadcasts.some((broadcast) => broadcast.id === broadcastId);
+function hasBroadcast(broadcastId: string): boolean {
+    const broadcast = _broadcasts.find((broadcast) => broadcast.id === broadcastId);
+    if(broadcast) return true;
+    // TODO: check if the server has the broadcast
+    return false;
 }
 
 /*
@@ -49,77 +80,92 @@ function hasBroadcast(broadcastId: string) {
 * @returns {Promise<string>} - The broadcast id
 */
 async function create(name: string): Promise<string> {
-    return emitEventWithAcknowledgment(SocketEvents.Broadcast.REQUEST_CREATE, 10000, name);
+    return emitEventUnhandled(SocketEvents.Broadcast.REQUEST_CREATE, 10000, name);
 }
         
 function terminate(broadcastId: string) {
-    socket.emit(SocketEvents.Broadcast.REQUEST_TERMINATE, broadcastId);
+    emitEvent(SocketEvents.Broadcast.REQUEST_TERMINATE, broadcastId);
 }
 function listen(broadcastId: string) {
-    socket.emit(SocketEvents.Broadcast.REQUEST_LISTEN, broadcastId);
+    emitEvent(SocketEvents.Broadcast.REQUEST_LISTEN, broadcastId);
 }
 function broadcast(broadcastId: string) {
-    socket.emit(SocketEvents.Broadcast.REQUEST_BROADCAST, broadcastId);
+    emitEvent(SocketEvents.Broadcast.REQUEST_BROADCAST, broadcastId);
 }
 function leave(broadcastId: string) {
-    socket.emit(SocketEvents.Broadcast.REQUEST_LEAVE, broadcastId);
+    emitEvent(SocketEvents.Broadcast.REQUEST_LEAVE, broadcastId);
+}
+function requestBroadcasts() {
+    emitEvent(SocketEvents.Broadcast.REQUEST_BROADCASTS);
 }
 
-
-function onBroadcasts(updatedBroadcasts: {_id: string; _broadcasterIds: string[], _listenerIds: string[], _name: string; }[]) {
-  _setBroadcasts(updatedBroadcasts.map((broadcast) => ({
-    id: broadcast._id,
-    name: broadcast._name,
-    broadcasterIds: broadcast._broadcasterIds,
-    listenerIds: broadcast._listenerIds
-  })));
+function onBroadcasts(updatedBroadcasts: Broadcast[]) {
+  console.log('broadcasts updated: ', updatedBroadcasts);
+    _setBroadcasts(updatedBroadcasts);
 }
 
-function onUpdate(updatedBroadcast: {_id: string; _broadcasterIds: string[], _listenerIds: string[], _name: string; }) {
-    _updateBroadcast(updatedBroadcast._id, {
-        id: updatedBroadcast._id,
-        name: updatedBroadcast._name,
-        broadcasterIds: updatedBroadcast._broadcasterIds,
-        listenerIds: updatedBroadcast._listenerIds
-    });
+function onUpdate(updatedBroadcast: Broadcast) {
+    _updateBroadcast(updatedBroadcast.id, updatedBroadcast);
 }
 
 function onListenerJoin(broadcastId: string, userId: string) {
-    // TODO
+    getBroadcastAsync(broadcastId).then((broadcast) => {
+        _updateBroadcast(broadcastId, {
+            ...broadcast,
+            listenerIds: [...broadcast.listenerIds, userId]
+        });
+    });
 }
 function onBroadcasterJoin(broadcastId: string, userId: string) {
-    // TODO
+    getBroadcastAsync(broadcastId).then((broadcast) => {
+        _updateBroadcast(broadcastId, {
+            ...broadcast,
+            broadcasterIds: [...broadcast.broadcasterIds, userId]
+        });
+    });
 }
 function onListenerLeave(broadcastId: string, userId: string) {
-    // TODO
+    console.log('listener left: ', userId);
+    getBroadcastAsync(broadcastId).then((broadcast) => {
+        _updateBroadcast(broadcastId, {
+            ...broadcast,
+            listenerIds: broadcast.listenerIds.filter((id) => id !== userId)
+        });
+    });
 }
 function onBroadcasterLeave(broadcastId: string, userId: string) {
-    // TODO
+    getBroadcastAsync(broadcastId).then((broadcast) => {
+        _updateBroadcast(broadcastId, {
+            ...broadcast,
+            broadcasterIds: broadcast.broadcasterIds.filter((id) => id !== userId)
+        });
+    });
 }
 
 function onTerminate(broadcastId: string) {
   _removeBroadcast(broadcastId);
 }
 
-function onCreate(broadcast: {_id: string; _broadcasterIds: string[], _listenerIds: string[], _name: string; }) {
-  console.log('broadcast created: ', broadcast._name);
+function onCreate(broadcast: Broadcast) {
+  console.log('broadcast created: ', broadcast.name);
     _addBroadcast({
-    id: broadcast._id,
-    name: broadcast._name,
-    broadcasterIds: broadcast._broadcasterIds,
-    listenerIds: broadcast._listenerIds
+    id: broadcast.id,
+    name: broadcast.name,
+    broadcasterIds: broadcast.broadcasterIds,
+    listenerIds: broadcast.listenerIds
   });
 }
 
 export const BroadcastFunctions = { 
     getBroadcasts,
-    getBroadcast,
+    getBroadcastAsync,
     hasBroadcast,
     create,
     terminate,
     listen,
     broadcast,
     leave,
+    requestBroadcasts,
 }
 export const BroadcastEvents = {
     onBroadcasts,

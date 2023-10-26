@@ -12,10 +12,13 @@ interface Dispatcher {
 * you can add more events here
 * or you can use strings directly in the code
 */
-export enum DispatcherEvent {
-    SET_USER_STATE = 'set-user-state',
-    SET_CONNECTION_STATE = 'set-connection-state',
-    SET_BROADCAST_STATE = 'set-broadcast-state'
+export enum DispatcherEvents {
+    SET_USER_STATE = 'set-user-state', // (User)
+    SET_CONNECTION_STATE = 'set-connection-state', // (ConnectionState)
+    SET_BROADCASTS_STATE = 'set-broadcast-state', // (Broadcast[])
+    SET_BROADCAST_STATE = 'set-broadcast-state', // + broadcastId (Broadcast)
+    SET_ERROR_MESSAGE_STATE = 'set-error-message-state', // (string, duration: number?, show: boolean?)
+    SET_SHOW_ERROR = 'set-show-error', // (boolean, duration: number?)
 }
 
 const events: Map<string, Function[]> = new Map();

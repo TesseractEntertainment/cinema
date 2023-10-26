@@ -1,6 +1,6 @@
 import { Server, Socket } from 'socket.io';
 import { io } from './io';
-import { SocketEvents } from './socketEvents';
+import { SocketEvents } from '../../frontend/src/common/socketEvents';
 import { BroadcastFunctions } from './Broadcast';
 
 const users: Map<string, User> = new Map();
@@ -30,23 +30,27 @@ export class User {
         this._name = name;
     }
 
-    getSocket(): Socket | undefined {
+    getSocket(): Socket {
         const socket = io.sockets.sockets.get(this._socketId);
-        console.log(this._socketId);
-        console.log(io.sockets.sockets.keys());
         if (!socket) {
-            return undefined;
+            throw new Error(`Socket ${this._socketId} not found`);
         }
         return socket;
     }
 }
 
-function sendUpdatedUsers() {
+function sendUsers() {
     io.emit(SocketEvents.User.USERS, Array.from(users.values()));
 }
 
-function sendUpdatedUsersTo(id: string) {
-    getUser(id)?.getSocket()?.emit(SocketEvents.User.USERS, Array.from(users.values()));
+function sendUsersTo(id: string) {
+    try {
+        getUser(id).getSocket().emit(SocketEvents.User.USERS, Array.from(users.values()));
+        console.log('sent users to: ', getUser(id).name);
+    }
+    catch (error) {
+        console.log(error);
+    }
 }
 
 function sendUpdatedUser(user: User) {
@@ -73,8 +77,18 @@ function getUsers(): Map<string, User> {
     return new Map(users);
 }
 
-function getUser(id: string): User | undefined {
-    return users.get(id);
+/**
+* Gets a user
+* @param {string} id - The user id
+* @returns {User} - The user
+* @throws {Error} - If the user was not found
+*/
+function getUser(id: string): User {
+    const user = users.get(id);
+    if (!user) {
+        throw new Error(`User ${id} not found`);
+    }
+    return user;
 }
 
 function setUser(user: User) {
@@ -82,22 +96,30 @@ function setUser(user: User) {
     sendUpdatedUser(user);
 }
 
+function cleanup(id: string) {
+    try {
+        BroadcastFunctions.leaveBroadcasts(id);
+    }
+    catch (error) {
+        console.log(error);
+    }
+}
+
 /* 
 * Updates a user
 * Does not update socketId
 * @param {User} updatedUser - The updated user
 */
-function updateUser(userId: string, name: string): boolean{
-    const user = users.get(userId);
-    if (!user) {
-        return false;
-    }
+function updateUser(userId: string, name: string) {
+    const user = getUser(userId);
     user.name = name;
     sendUpdatedUser(user);
-    return true;
 }
 
-function createUser(socketId: string, name?: string) {
+function createUser(socketId: string, name?: string): User {
+    if (users.has(socketId)) {
+        throw new Error(`User ${socketId} already exists`);
+    } 
     const user = new User(socketId, name);
     users.set(socketId, user);
     sendCreatedUser(user);
@@ -132,32 +154,22 @@ function createUser(socketId: string, name?: string) {
 //     return true;
 // }
 
-function deleteUser(id: string): boolean {
+function deleteUser(id: string) {
+    cleanup(id);
     const user = getUser(id);
-    if (!user) {
-        return false;
-    }
-    const socket = user.getSocket();
-    if (socket) {
-        socket.rooms.forEach((room) => {
-            const broadcast = BroadcastFunctions.getBroadcast(room);
-            if (broadcast) {
-                broadcast.leave(id);
-            }
-        });
-    }
     users.delete(user.id);
     sendDeletedUser(user.id);
     console.log('user deleted: ', user.name);
     return true;
 }
 
-export const UserFunctions = { getUsers,
+export const UserFunctions = { 
+    getUsers,
     getUser,
     setUser,
     updateUser,
     createUser,
     deleteUser,
-    sendUpdatedUsers,
-    sendUpdatedUsersTo,
+    sendUsers,
+    sendUsersTo,
  };

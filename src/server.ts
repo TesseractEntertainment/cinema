@@ -3,12 +3,11 @@ import streamRoutes from './routes/streamRoutes';
 import { BroadcastFunctions } from './util/Broadcast';
 import { User, UserFunctions } from './util/User';
 import { app, io } from './util/io';
-import { SocketEvents } from './util/socketEvents';
+import { SocketEvents } from '../frontend/src/common/socketEvents';
+import { BroadcastDTO } from './util/DTOs';
 
 io.on('connection', (socket) => {
     UserFunctions.createUser(socket.id);
-    UserFunctions.sendUpdatedUsersTo(socket.id);
-    BroadcastFunctions.sendUpdatedBroadcastsTo(socket.id);
 
     // Signaling
     socket.on(SocketEvents.Signaling.OFFER, (offer, userId) => {
@@ -31,35 +30,52 @@ io.on('connection', (socket) => {
     });
 
     // Broadcast
-    socket.on(SocketEvents.Broadcast.REQUEST_LISTEN, (broadcastId) => {
-        BroadcastFunctions.joinBroadcast(socket.id, broadcastId);
+    socket.on(SocketEvents.Broadcast.REQUEST_LISTEN, (broadcastId, callback) => {
+        acknowledge(socket.id, callback, BroadcastFunctions.joinBroadcast, socket.id, broadcastId);
     });
-    socket.on(SocketEvents.Broadcast.REQUEST_BROADCAST, (broadcastId) => {
-        BroadcastFunctions.joinBroadcast(socket.id, broadcastId, true);
+    socket.on(SocketEvents.Broadcast.REQUEST_BROADCAST, (broadcastId, callback) => {
+        acknowledge(socket.id, callback, BroadcastFunctions.joinBroadcast, socket.id, broadcastId, true);
     });
-    socket.on(SocketEvents.Broadcast.REQUEST_LEAVE, (broadcastId) => {
-        BroadcastFunctions.leaveBroadcast(socket.id, broadcastId);
+    socket.on(SocketEvents.Broadcast.REQUEST_LEAVE, (broadcastId, callback) => {
+        acknowledge(socket.id, callback, BroadcastFunctions.leaveBroadcast, socket.id, broadcastId);
     });
-    socket.on(SocketEvents.Broadcast.REQUEST_TERMINATE, (broadcastId) => {
-        BroadcastFunctions.terminateBroadcast(broadcastId);
+    socket.on(SocketEvents.Broadcast.REQUEST_TERMINATE, (broadcastId, callback) => {
+        acknowledge(socket.id, callback, BroadcastFunctions.terminateBroadcast, broadcastId);
     });
     socket.on(SocketEvents.Broadcast.REQUEST_CREATE, (name, callback) => {
-        const id = BroadcastFunctions.createBroadcast(name).id;
-        if (callback) callback(id);
+        acknowledge(socket.id, callback, () => BroadcastFunctions.createBroadcast(name).id);
     });
-    socket.on(SocketEvents.Broadcast.REQUEST_UPDATE, (broadcast) => {
-        BroadcastFunctions.updateBroadcast(broadcast);
+    socket.on(SocketEvents.Broadcast.REQUEST_UPDATE, (broadcast, callback) => {
+        acknowledge(socket.id, callback, BroadcastFunctions.updateBroadcast, broadcast);
     });
+    socket.on(SocketEvents.Broadcast.GET_BROADCASTS, (callback) => {
+        acknowledge(socket.id, callback, BroadcastDTO.fromBroadcastMap, BroadcastFunctions.getBroadcasts());
+    });
+    socket.on(SocketEvents.Broadcast.GET_BROADCAST, (broadcastId, callback) => {
+        acknowledge(socket.id, callback, BroadcastFunctions.getBroadcastDTO, broadcastId);
+    });
+    socket.on(SocketEvents.Broadcast.REQUEST_BROADCASTS, (callback) => {
+        acknowledge(socket.id, callback, BroadcastFunctions.sendBroadcastsTo, socket.id);
+    })
 
     // User
-    socket.on(SocketEvents.User.REQUEST_CREATE, (name) => {
-        UserFunctions.createUser(socket.id, name);
+    socket.on(SocketEvents.User.REQUEST_CREATE, (name, callback) => {
+        acknowledge(socket.id, callback, UserFunctions.createUser, socket.id, name);
     });
-    socket.on(SocketEvents.User.REQUEST_UPDATE, (id, name) => {
-        UserFunctions.updateUser(id, name);
+    socket.on(SocketEvents.User.REQUEST_UPDATE, (id, name, callback) => {
+        acknowledge(socket.id, callback, UserFunctions.updateUser, id, name);
     });
-    socket.on(SocketEvents.User.REQUEST_DELETE, (userId) => {
-        UserFunctions.deleteUser(userId);
+    socket.on(SocketEvents.User.REQUEST_DELETE, (userId, callback) => {
+        acknowledge(socket.id, callback, UserFunctions.deleteUser, userId);
+    });
+    socket.on(SocketEvents.User.REQUEST_USERS, (callback) => {
+        acknowledge(socket.id, callback, UserFunctions.sendUsersTo, socket.id);
+    });
+    socket.on(SocketEvents.User.GET_USERS, (callback) => {
+        acknowledge(socket.id, callback, Array.from, UserFunctions.getUsers().values());
+    });
+    socket.on(SocketEvents.User.GET_USER, (userId, callback) => {
+        acknowledge(socket.id, callback, UserFunctions.getUser, userId);
     });
 
     socket.on('disconnect', () => {
@@ -67,9 +83,35 @@ io.on('connection', (socket) => {
         socket.offAny();
         // Leave all broadcasts
         UserFunctions.deleteUser(socket.id); 
-        console.log('user disconnected: ', UserFunctions.getUser(socket.id)?.name);
     });
 });
 
 // Routes
 app.use('/api/streams', streamRoutes);
+
+function sendError(socket: Socket, error: any) {
+    const errorString = error instanceof Error ? error.message : error?.toString();
+    socket.emit(SocketEvents.Util.ERROR, errorString);
+}
+function sendErrorTo(socketId: string, error: any) {
+    const errorString = error instanceof Error ? error.message : error?.toString();
+    io.to(socketId).emit(SocketEvents.Util.ERROR, errorString);
+}
+
+function getErrorMessage(error: any) {
+    const errorMessage = error.message;
+    return errorMessage ? errorMessage : error.toString();
+}
+
+function acknowledge(socketId: string, callback: Function, returnAction: Function, ...args: any[]) {
+    try {
+        const result = returnAction(...args);
+        if(callback instanceof Function) callback(result, true);
+        else console.error('no callback' + (returnAction.name ? ' for ' + returnAction.name : ''));
+        console.log('acknowledged ' + (returnAction.name ? returnAction.name : '') + ' for ' + socketId);
+    } catch (err) {
+        console.error(err);
+        if(callback instanceof Function) callback(getErrorMessage(err), false);
+        else sendErrorTo(socketId, err);
+    }
+}

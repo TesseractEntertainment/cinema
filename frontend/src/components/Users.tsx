@@ -1,6 +1,6 @@
 import React, { useEffect, useReducer, useState } from 'react';
 import { ConnectionFunctions, PeerConnection } from '../util/connection';
-import { Dispatcher, DispatcherEvent } from '../util/dispatcher';
+import { Dispatcher, DispatcherEvents } from '../util/dispatcher';
 import { User, UserFunctions } from '../util/user';
 import '../styles/user.css';
 
@@ -37,9 +37,9 @@ export function Users() {
   const [, forceUpdate] = useReducer(x => x + 1, 0);
 //   const peerConnections = ConnectionFunctions.getPeerConnections();
   useEffect(() => {
-      Dispatcher.addListener(DispatcherEvent.SET_USER_STATE, setUsers);
+      Dispatcher.addListener(DispatcherEvents.SET_USER_STATE, setUsers);
       return () => {
-        Dispatcher.removeListener(DispatcherEvent.SET_USER_STATE, setUsers);
+        Dispatcher.removeListener(DispatcherEvents.SET_USER_STATE, setUsers);
       };
   }, [users]);
   return (

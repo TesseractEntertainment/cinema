@@ -1,15 +1,16 @@
 import React from "react";
 import { Link } from 'react-router-dom';
-import { Broadcast } from "../util/broadcast";
-import { Dispatcher, DispatcherEvent } from "../util/dispatcher";
+import { Broadcast, BroadcastFunctions } from "../util/broadcast";
+import { Dispatcher, DispatcherEvents } from "../util/dispatcher";
 import { UserFunctions } from "../util/user";
 
 export default function Broadcasts() {
-    const [broadcasts, setBroadcasts] = React.useState<Broadcast[]>([]);
+    const [broadcasts, setBroadcasts] = React.useState<Broadcast[]>(BroadcastFunctions.getBroadcasts());
     React.useEffect(() => {
-        Dispatcher.addListener(DispatcherEvent.SET_BROADCAST_STATE, setBroadcasts);
+        setBroadcasts(BroadcastFunctions.getBroadcasts());
+        Dispatcher.addListener(DispatcherEvents.SET_BROADCASTS_STATE, setBroadcasts);
         return () => {
-            Dispatcher.removeListener(DispatcherEvent.SET_BROADCAST_STATE, setBroadcasts);
+            Dispatcher.removeListener(DispatcherEvents.SET_BROADCASTS_STATE, setBroadcasts);
         }
     }, []);
     return (

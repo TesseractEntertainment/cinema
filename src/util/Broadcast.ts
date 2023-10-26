@@ -1,7 +1,8 @@
 import { v4 as uuidv4 } from 'uuid';
 import { UserFunctions } from './User';
 import { io } from './io';
-import { SocketEvents } from './socketEvents';
+import { SocketEvents } from '../../frontend/src/common/socketEvents';
+import { BroadcastDTO } from './DTOs';
 
 const broadcasts: Map<string, Broadcast> = new Map();
 
@@ -38,41 +39,67 @@ export class Broadcast {
         this._name = name;
     }
 
-    joinAsBroadcaster(userId: string): boolean {
+    isListening(userId: string): boolean {
+        return this._listenerIds.includes(userId);
+    }
+
+    isBroadcasting(userId: string): boolean {
+        return this._broadcasterIds.includes(userId);
+    }
+
+    /**
+    * Joins the broadcast as a broadcaster
+    * @param {string} userId - The user id
+    * @throws {Error} - If the user is already broadcasting
+    * @throws {Error} - If the user is not found
+    */
+    joinAsBroadcaster(userId: string) {
+        const user = UserFunctions.getUser(userId);
+        if (this.isBroadcasting(userId)) {
+            throw new Error(`User ${userId} is already broadcasting`);
+        }
+        user.getSocket().join(this._id);
         this._broadcasterIds.push(userId);
-        const user = UserFunctions.getUser(userId);
-        if (!user) {
-            return false;
-        }
-        user.getSocket()?.join(this._id);
-        return true;
     }
 
-    joinAsListener(userId: string): boolean {
+    /**
+    * Joins the broadcast as a listener
+    * @param {string} userId - The user id
+    * @throws {Error} - If the user is already listening
+    * @throws {Error} - If the user is not found
+    */
+    joinAsListener(userId: string) {
+        const user = UserFunctions.getUser(userId);
+        if (this.isListening(userId)) {
+            throw new Error(`User ${userId} is already listening`);
+        }
+        user.getSocket().join(this._id);
         this._listenerIds.push(userId);
-        const user = UserFunctions.getUser(userId);
-        if (!user) {
-            return false;
-        }
-        user.getSocket()?.join(this._id);
-        return true;
     }
 
-    leave(userId: string): boolean {
+    /**
+    * Leaves the broadcast
+    * @param {string} userId - The user id
+    * @throws {Error} - If the user is not in the broadcast
+    * @throws {Error} - If the user is not found
+    */
+    leave(userId: string) {
         const user = UserFunctions.getUser(userId);
-        if (!user) {
-            return false;
+        try {
+            user.getSocket().leave(this._id);
         }
-        user.getSocket()?.leave(this._id);
+        catch (e) {
+        }
         if( this._broadcasterIds.includes(userId) ) {
             this._broadcasterIds = this._broadcasterIds.filter(broadcaster => broadcaster !== userId);
+            sendBroadcasterLeft(userId, this._id);
         } else if( this._listenerIds.includes(userId) ) {
             this._listenerIds = this._listenerIds.filter(listener => listener !== userId);
+            sendListenerLeft(userId, this._id);
         }
         else {
-            return false;
+            throw new Error(`User ${userId} is not in broadcast ${this._id}`);
         }
-        return true;
     }
 
     broadcastMessage(message: string, data: any): void {
@@ -82,34 +109,27 @@ export class Broadcast {
     broadcastListenerMessage(message: string, data: any): void {
         this._listenerIds.forEach(listener => {
             const user = UserFunctions.getUser(listener);
-            if (user) {
-                user.getSocket()?.emit(message, data);
-            }
+            user.getSocket().emit(message, data);
         });
     }
 
     broadcastBroadcasterMessage(message: string, data: any): void {
         this._broadcasterIds.forEach(broadcaster => {
             const user = UserFunctions.getUser(broadcaster);
-            if (user) {
-                user.getSocket()?.emit(message, data);
-            }
+            user.getSocket().emit(message, data);
         });
     }
 
     close(): void {
+        // TODO
         io.to(this._id).emit('broadcast-closed', this._id);
         this._broadcasterIds.forEach(broadcaster => {
             const user = UserFunctions.getUser(broadcaster);
-            if (user) {
-                user.getSocket()?.leave(this._id);
-            }
+            user.getSocket().leave(this._id);
         });
         this._listenerIds.forEach(listener => {
             const user = UserFunctions.getUser(listener);
-            if (user) {
-                user.getSocket()?.leave(this._id);
-            }
+            user.getSocket().leave(this._id);
         });
         this._broadcasterIds = [];
         this._listenerIds = [];
@@ -117,73 +137,88 @@ export class Broadcast {
 }
 
 // Socket events
-function sendUpdatedBroadcasts() {
-    io.emit(SocketEvents.Broadcast.BROADCASTS, Array.from(broadcasts.values()));
+function sendBroadcasts() {
+    io.emit(SocketEvents.Broadcast.BROADCASTS, BroadcastDTO.fromBroadcastMap(broadcasts));
 }
 
-function sendUpdatedBroadcastsTo(id: string) {
-    UserFunctions.getUser(id)?.getSocket()?.emit(SocketEvents.Broadcast.BROADCASTS, Array.from(broadcasts.values()));
+function sendBroadcastsTo(id: string) {
+    try {
+        UserFunctions.getUser(id).getSocket().emit(SocketEvents.Broadcast.BROADCASTS, BroadcastDTO.fromBroadcastMap(broadcasts));
+        console.log('sent broadcasts to ', id);
+    }
+    catch (e) {
+        console.log('error sending broadcasts to ', id);
+        console.log(e);
+    }    
 }
 
-function sendUpdatedBroadcast(broadcast: Broadcast) {
-    io.emit(SocketEvents.Broadcast.UPDATED, broadcast);
+function sendUpdated(broadcast: Broadcast) {
+    io.emit(SocketEvents.Broadcast.UPDATED, BroadcastDTO.fromBroadcast(broadcast));
 }
 
-function sendCreatedBroadcast(broadcast: Broadcast) {
-    console.log('sent event')
-    io.emit(SocketEvents.Broadcast.CREATED, broadcast);
+function sendCreated(broadcast: Broadcast) {
+    io.emit(SocketEvents.Broadcast.CREATED, BroadcastDTO.fromBroadcast(broadcast));
 }
 
-function sendTerminatedBroadcast(id: string) {
+function sendTerminated(id: string) {
     io.emit(SocketEvents.Broadcast.TERMINATED, id);
 }
 
-function sendJoinedBroadcast(userId: string, broadcastId: string, isBroadcaster = false) {
-    io.to(userId).emit(isBroadcaster ? SocketEvents.Broadcast.BROADCASTER_JOINED : SocketEvents.Broadcast.LISTENER_JOINED, broadcastId, userId);
+function sendListenerJoined(userId: string, broadcastId: string) {
+    io.emit(SocketEvents.Broadcast.LISTENER_JOINED, broadcastId, userId);
 }
 
-function sendLeftBroadcast(userId: string, broadcastId: string) {
-    if (broadcasts.get(broadcastId)?.broadcasters.includes(userId)) {
-        io.to(userId).emit(SocketEvents.Broadcast.BROADCASTER_LEFT, broadcastId, userId);
-    } 
-    if (broadcasts.get(broadcastId)?.listeners.includes(userId)) {
-        io.to(userId).emit(SocketEvents.Broadcast.LISTENER_LEFT, broadcastId, userId);
-    }
+function sendBroadcasterJoined(userId: string, broadcastId: string) {
+    io.emit(SocketEvents.Broadcast.BROADCASTER_JOINED, broadcastId, userId);
 }
 
-/*
-* Returns a copy of the broadcasts
+function sendListenerLeft(userId: string, broadcastId: string) {
+    io.emit(SocketEvents.Broadcast.LISTENER_LEFT, broadcastId, userId);
+}
+
+function sendBroadcasterLeft(userId: string, broadcastId: string) {
+    io.emit(SocketEvents.Broadcast.BROADCASTER_LEFT, broadcastId, userId);
+}
+
+/**
+* Returns a copy of the broadcasts.
 * @returns {Map<string, Broadcast>} - The broadcasts (copy)
 */
-function getBroadcasts() {
+function getBroadcasts(): Map<string, Broadcast> {
     return new Map(broadcasts);
 }
 
-/*
-* Returns a broadcast by id
-* @param {string} id - The id of the broadcast to get
-* @returns {Broadcast|undefined} - The broadcast
+/**
+* Returns a broadcast by id.
+* @param {string} id - The id of the broadcast to get.
+* @returns Broadcast - The broadcast.
+* @throws {Error} - If the broadcast is not found.
 */
-function getBroadcast(id: string) {
-    return broadcasts.get(id);
+function getBroadcast(id: string): Broadcast {
+    const broadcast = broadcasts.get(id);
+    if (!broadcast) {
+        throw new Error('Broadcast not found');
+    }
+    return broadcast;
+}
+
+function getBroadcastDTO(id: string): BroadcastDTO {
+    return BroadcastDTO.fromBroadcast(getBroadcast(id));
 }
 
 // Use this function to set broadcasts instead of broadcasts.set
 function setBroadcast(broadcast: Broadcast) {
     broadcasts.set(broadcast.id, broadcast);
-    sendUpdatedBroadcast(broadcast);
+    sendUpdated(broadcast);
 }
 
-/* 
-* Updates a broadcast
-* Does not update id, broadcasters, or listeners
-* @param {Broadcast} updatedBroadcast - The updated broadcast
+/**
+* Updates a broadcast.
+* Does not update id, broadcasters, or listeners.
+* @param {Broadcast} updatedBroadcast - The updated broadcast.
 */
 function updateBroadcast(updatedBroadcast: Broadcast): boolean {
     const broadcast = getBroadcast(updatedBroadcast.id);
-    if (!broadcast) {
-        return false;
-    }
     broadcast.name = updatedBroadcast.name;
     setBroadcast(broadcast);
     return true;
@@ -192,7 +227,7 @@ function updateBroadcast(updatedBroadcast: Broadcast): boolean {
 function createBroadcast(name?: string): Broadcast{
     const broadcast = new Broadcast(name);
     broadcasts.set(broadcast.id, broadcast);
-    sendCreatedBroadcast(broadcast);
+    sendCreated(broadcast);
     console.log('broadcast created: ', broadcast.name);
     return broadcast;
 }
@@ -204,49 +239,58 @@ function terminateBroadcast(id: string): boolean {
     }
     broadcast.close();
     broadcasts.delete(id);
-    sendTerminatedBroadcast(id);
+    sendTerminated(id);
     console.log('broadcast terminated: ', broadcast.name);
     return true;
 }
 
-function joinBroadcast(userId: string, broadcastId: string, isBroadcaster = false): boolean {
+/**
+* Joins a broadcast.
+* @param {string} userId - The user id.
+* @param {string} broadcastId - The broadcast id.
+* @param {boolean} [asBroadcaster=false] - Whether the user is a broadcaster.
+* @throws {Error} - If the broadcast is not found
+* @throws {Error} - If the user is already broadcasting/listening
+* @throws {Error} - If the user is not found
+*/
+function joinBroadcast(userId: string, broadcastId: string, asBroadcaster: boolean = false) {
     const broadcast = getBroadcast(broadcastId);
-    if (!broadcast) {
-        return false; 
-    }
-    if (isBroadcaster) {
+    if (asBroadcaster) {
         broadcast.joinAsBroadcaster(userId);
+        sendBroadcasterJoined(userId, broadcastId);
     } else {
         broadcast.joinAsListener(userId);
+        sendListenerJoined(userId, broadcastId);
     }
-    sendJoinedBroadcast(userId, broadcastId, isBroadcaster);
-    console.log(UserFunctions.getUser(userId)?.name, ' joined broadcast: ', broadcast.name, ' as ', isBroadcaster ? 'broadcaster' : 'listener');
-    return true;
+    console.log(UserFunctions.getUser(userId)?.name, ' joined broadcast: ', broadcast.name, ' as ', asBroadcaster ? 'broadcaster' : 'listener');
 }
 
-function leaveBroadcast(userId: string, broadcastId: string): boolean {
+function leaveBroadcast(userId: string, broadcastId: string) {
     const broadcast = getBroadcast(broadcastId);
-    if (!broadcast) {
-        return false;
-    }
-    if(!broadcast.leave(userId)) {
-        return false;
-    };
-    sendLeftBroadcast(userId, broadcastId);
+    broadcast.leave(userId);
     console.log(userId, ' left broadcast: ', broadcast.name);
     return true;
 }
 
+function leaveBroadcasts(userId: string) {
+    broadcasts.forEach((broadcast) => {
+        broadcast.leave(userId);
+    });
+}
+    
+
 export const BroadcastFunctions = { getBroadcasts,
     getBroadcast,
+    getBroadcastDTO,
     setBroadcast,
     updateBroadcast,
     createBroadcast,
     terminateBroadcast,
     joinBroadcast,
     leaveBroadcast,
-    sendUpdatedBroadcasts,
-    sendUpdatedBroadcastsTo,
+    leaveBroadcasts,
+    sendBroadcasts,
+    sendBroadcastsTo,
  };
 
 // TODO:

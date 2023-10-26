@@ -1,10 +1,20 @@
+/* Callbacks are used to pass data from the server to the client
+* @callback SocketCallback
+* @param {any} data - The data or error
+* @param {boolean} success = true - Whether the request was successful
+*/
+
 enum Broadcast {
+    // Requests
     REQUEST_LISTEN = 'broadcast-request-listen', // (broadcastId: string)
     REQUEST_BROADCAST = 'broadcast-request-broadcast', // (broadcastId: string)
     REQUEST_LEAVE = 'broadcast-request-leave', // (broadcastId: string)
     REQUEST_TERMINATE = 'broadcast-request-terminate', // (broadcastId: string)
     REQUEST_CREATE = 'broadcast-request-create', // (name: string, callback: (id: string, success = true) => void
     REQUEST_UPDATE = 'broadcast-request-update', // (broadcast: Broadcast)
+    GET_BROADCASTS = 'broadcast-get-broadcasts', // (callback: (broadcasts: Broadcast[]) => void)
+    GET_BROADCAST = 'broadcast-get-broadcast', // (broadcastId: string, callback: (broadcast: Broadcast) => void)
+    REQUEST_BROADCASTS = 'broadcast-request-broadcasts', // ()
 
     // Notifications
     LISTENER_JOINED = 'broadcast-listener-joined', // (broadcastId: string, userId: string)
@@ -25,6 +35,9 @@ enum User {
     REQUEST_CREATE = 'user-request-create', // (name: string)
     REQUEST_UPDATE = 'user-request-update', // (user: User)
     REQUEST_DELETE = 'user-request-delete', // (id: string)
+    REQUEST_USERS = 'user-request-users', // ()
+    GET_USERS = 'user-get-users', // (callback: (users: User[]) => void)
+    GET_USER = 'user-get-user', // (id: string, callback: (user: User) => void)
 
     // Notifications
     CREATED = 'user-created', // (user: User)
@@ -55,6 +68,10 @@ enum Signaling {
     STOP_AUDIO = 'signaling-stop-audio', // (userId: string)
 }   
 
+enum Util {
+    ERROR = 'util-error', // (error: string)
+}
+
 /*
 * Collection of socket events
 * Client makes I statements (JOIN: "I want to join a broadcast")
@@ -62,4 +79,4 @@ enum Signaling {
 * or notifications (NEW_BROADCAST: "A new broadcast has been created")
 * @enum {string}
 */
-export const SocketEvents = { Broadcast, User, Signaling };
+export const SocketEvents = { Broadcast, User, Signaling, Util };
