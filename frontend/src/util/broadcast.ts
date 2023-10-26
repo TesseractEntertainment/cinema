@@ -1,6 +1,6 @@
 import socket from "../socket";
 import { Dispatcher, DispatcherEvents } from "./dispatcher";
-import { emitEventUnhandled, emitEvent } from "./connection";
+import { emitEvent } from "./connection";
 import { SocketEvents } from '../common/socketEvents';
 
 var _broadcasts: Broadcast[] = [];
@@ -80,7 +80,7 @@ function hasBroadcast(broadcastId: string): boolean {
 * @returns {Promise<string>} - The broadcast id
 */
 async function create(name: string): Promise<string> {
-    return emitEventUnhandled(SocketEvents.Broadcast.REQUEST_CREATE, 10000, name);
+    return emitEvent(SocketEvents.Broadcast.REQUEST_CREATE, name);
 }
         
 function terminate(broadcastId: string) {

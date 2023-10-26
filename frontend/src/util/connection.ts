@@ -38,8 +38,11 @@ function onDisconnect() {
 */
 export function emitEventUnhandled(event: string, timeoutMs: number = 0, ...data: any[]): Promise<any> {
   return new Promise((resolve, reject) => {
-    socket.emit(event, ...data, (response: any, success: boolean = true) => {
-      if (success) {
+    socket.timeout(timeoutMs).emit(event, ...data, (err: any, response: any, success: boolean = true) => {
+      if (err) {
+        reject(err);
+      }
+      else if (success) {
         resolve(response);
       }
       else {
@@ -47,12 +50,12 @@ export function emitEventUnhandled(event: string, timeoutMs: number = 0, ...data
       }
     });
 
-    if (timeoutMs > 0) {
-      // Timeout logic
-      setTimeout(() => {
-          reject("Timeout waiting for acknowledgment");
-      }, timeoutMs);
-    }
+    // if (timeoutMs > 0) {
+    //   // Timeout logic
+    //   setTimeout(() => {
+    //       reject("Timeout waiting for acknowledgment");
+    //   }, timeoutMs);
+    // }
   });
 }
 
