@@ -2,7 +2,6 @@ import React from "react";
 import { Link } from 'react-router-dom';
 import { Broadcast, BroadcastFunctions } from "../util/broadcast";
 import { Dispatcher, DispatcherEvents } from "../util/dispatcher";
-import { UserFunctions } from "../util/user";
 
 export default function Broadcasts() {
     const [broadcasts, setBroadcasts] = React.useState<Broadcast[]>(BroadcastFunctions.getBroadcasts());

@@ -46,6 +46,7 @@ function addUser(user: User) {
 function removeUser(userId: string) {
     setUsers(_users.filter((user) => user.id !== userId));
 }
+// TODO: rework and dispatch event
 function updateUser(userId: string, updatedUser: User) {
     if (hasUser(userId)) {
       setUsers(_users.map((user) => user.id === userId ? updatedUser : user));

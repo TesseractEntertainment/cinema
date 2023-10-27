@@ -3,19 +3,7 @@ import { ConnectionFunctions, PeerConnection } from '../util/connection';
 import { Dispatcher, DispatcherEvents } from '../util/dispatcher';
 import { User, UserFunctions } from '../util/user';
 import '../styles/user.css';
-
-function onConnect(userId: string) {
-    ConnectionFunctions.createPeerConnection(userId);
-}
-function onDisconnect(userId: string) {
-    ConnectionFunctions.disconnectPeer(userId);
-}
-function onRequestStream(userId: string) {
-    ConnectionFunctions.requestStream(userId);
-}
-function onStreamTo(userId: string) {
-    ConnectionFunctions.streamAudio(userId);
-}
+import UserComp from './User';
 
 export function Users() {
   const [users, setUsers] = useState<User[]>(UserFunctions.getUsers());
@@ -30,19 +18,7 @@ export function Users() {
   return (
     <div className="users-container">
         {users.map(user => (
-            <div key={user.id} className="user-item">
-                <span className="user-name">{user.name}</span>
-                <span className={`connection-state ${user.connectionState}`}>{user.connectionState}</span>
-                {user.connectionState === 'disconnected' ? (
-                    <button onClick={() => onConnect(user.id)}>Connect</button>
-                ) : (
-                    <>
-                        <button onClick={() => onDisconnect(user.id)}>Disconnect</button>
-                        <button onClick={() => onRequestStream(user.id)}>Request Stream</button>
-                        <button onClick={() => onStreamTo(user.id)}>Stream To</button>
-                    </>
-                )}
-            </div>
+            <UserComp user={user} connectionControlls/>
         ))}
     </div>
   );

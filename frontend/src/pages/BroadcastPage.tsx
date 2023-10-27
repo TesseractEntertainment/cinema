@@ -4,6 +4,7 @@ import { UserFunctions } from '../util/user';
 import { useLoaderData, useNavigate } from 'react-router-dom';
 import { Dispatcher, DispatcherEvents } from '../util/dispatcher';
 import { User } from '../util/user';
+import UserComp from '../components/User';
 
 export async function loader({params: {id}}: {params: {id: string}}) {
   const broadcast = await BroadcastFunctions.getBroadcastAsync(id);
@@ -85,15 +86,15 @@ export default function BroadcastPage() {
         {broadcastUsers ? (<>
         <h3>Listeners: {broadcast.listenerIds.length}</h3>
         <ul>
-          {broadcast.listenerIds.map(listenerId => (
-            <li key={listenerId}>{broadcastUsers.find((user) => listenerId == user.id)?.name}</li>
-          ))}
+          {broadcastUsers.length >= broadcast.listenerIds.length + broadcast.broadcasterIds.length ? broadcast.listenerIds.map(listenerId => (
+            <li key={listenerId}>{<UserComp user={broadcastUsers.find((user) => listenerId == user.id)!} />}</li>
+          )): (<p>Loading listeners...</p>)}
         </ul>
         <h3>Broadcasters: {broadcast.broadcasterIds.length}</h3>
         <ul>
-          {broadcast.broadcasterIds.map(broadcasterId => (
-            <li key={broadcasterId}>{broadcastUsers.find((user) => broadcasterId == user.id)?.name}</li>
-          ))}
+          {broadcastUsers.length >= broadcast.listenerIds.length + broadcast.broadcasterIds.length ? broadcast.broadcasterIds.map(broadcasterId => (
+            <li key={broadcasterId}>{<UserComp user={broadcastUsers.find((user) => broadcasterId == user.id)!} />}</li>
+          )): (<p>Loading broadcasters...</p>)}
         </ul>
         </>)
         : (<p>Loading users...</p>)}

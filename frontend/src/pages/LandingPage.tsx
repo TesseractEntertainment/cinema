@@ -13,7 +13,6 @@ export default function LandingPage() {
         <ConnectionState />
         <ConnectionManager />
         <Users />
-        <audio controls />
     </>
   );
 }

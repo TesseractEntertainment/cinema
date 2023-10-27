@@ -143,13 +143,20 @@ async function onNegotiationNeeded(event: Event) {
     }
   }
   
-function onTrack(event: RTCTrackEvent) {
+async function onTrack(event: RTCTrackEvent) {
+    const peerConnection = event.target as PeerConnection;
     const [stream] = event.streams;
-    // Assuming you have an <audio> element in your component to play the audio
-    const audioElement = document.querySelector('audio');
+    const audioElement = document.getElementById(`audio-${peerConnection.id}`) as HTMLAudioElement;
     if (audioElement) { 
       audioElement.srcObject = stream;
-      audioElement.play();
+      try {
+        await audioElement.play();
+      }
+      catch (error) {
+        console.error('Error playing audio', error);
+      }
+    } else {
+      console.error(`Could not find audio element`);
     }
   }
 
