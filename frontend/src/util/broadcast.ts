@@ -2,12 +2,15 @@ import socket from "../socket";
 import { Dispatcher, DispatcherEvents } from "./dispatcher";
 import { emitEvent } from "./connection";
 import { SocketEvents } from '../common/socketEvents';
+import { BroadcastDTO } from "./DTOs";
 
 var _broadcasts: Broadcast[] = [];
 
 socket.on('connect', onConnect);
 socket.on(SocketEvents.Broadcast.LISTENER_JOINED, onListenerJoin);
+socket.on(SocketEvents.Broadcast.BROADCASTER_JOINED, onBroadcasterJoin);
 socket.on(SocketEvents.Broadcast.LISTENER_LEFT, onListenerLeave);
+socket.on(SocketEvents.Broadcast.BROADCASTER_LEFT, onBroadcasterLeave);
 socket.on(SocketEvents.Broadcast.CREATED, onCreate);
 socket.on(SocketEvents.Broadcast.TERMINATED, onTerminate);
 socket.on(SocketEvents.Broadcast.UPDATED, onUpdate);
@@ -63,9 +66,9 @@ function getBroadcasts() {
 async function getBroadcastAsync(broadcastId: string): Promise<Broadcast> {
     var broadcast = _broadcasts.find((broadcast) => broadcast.id === broadcastId);
     if(broadcast) return broadcast;
-    const serverBroadcast = await emitEvent(SocketEvents.Broadcast.GET_BROADCAST, broadcastId);
+    const serverBroadcast: BroadcastDTO = await emitEvent(SocketEvents.Broadcast.GET_BROADCAST, broadcastId);
     if(!serverBroadcast) throw new Error(`Broadcast ${broadcastId} not found`);
-    return serverBroadcast;
+    return BroadcastDTO.toBroadcast(serverBroadcast);
 }
 function hasBroadcast(broadcastId: string): boolean {
     const broadcast = _broadcasts.find((broadcast) => broadcast.id === broadcastId);
@@ -99,12 +102,15 @@ function requestBroadcasts() {
     emitEvent(SocketEvents.Broadcast.REQUEST_BROADCASTS);
 }
 
-function onBroadcasts(updatedBroadcasts: Broadcast[]) {
-  console.log('broadcasts updated: ', updatedBroadcasts);
+function onBroadcasts(updatedBroadcastDTOs: BroadcastDTO[]) {
+    const updatedBroadcasts = BroadcastDTO.toBroadcasts(updatedBroadcastDTOs);
+    console.log('broadcasts recieved: ', updatedBroadcasts);
     _setBroadcasts(updatedBroadcasts);
 }
 
-function onUpdate(updatedBroadcast: Broadcast) {
+function onUpdate(updatedBroadcastDTO: BroadcastDTO) {
+    const updatedBroadcast = BroadcastDTO.toBroadcast(updatedBroadcastDTO);
+    console.log('broadcast updated: ', updatedBroadcast);
     _updateBroadcast(updatedBroadcast.id, updatedBroadcast);
 }
 
@@ -146,8 +152,9 @@ function onTerminate(broadcastId: string) {
   _removeBroadcast(broadcastId);
 }
 
-function onCreate(broadcast: Broadcast) {
-  console.log('broadcast created: ', broadcast.name);
+function onCreate(broadcastDTO: BroadcastDTO) {
+    const broadcast = BroadcastDTO.toBroadcast(broadcastDTO);
+    console.log('broadcast created: ', broadcast.name);
     _addBroadcast({
     id: broadcast.id,
     name: broadcast.name,

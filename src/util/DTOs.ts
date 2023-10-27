@@ -1,4 +1,5 @@
 import { Broadcast } from "./Broadcast";
+import { User } from "./User";
 
 export class BroadcastDTO {
     id: string;
@@ -23,5 +24,27 @@ export class BroadcastDTO {
 
     static fromBroadcastMap(broadcasts: Map<string, Broadcast>): BroadcastDTO[] {
         return BroadcastDTO.fromBroadcasts(Array.from(broadcasts.values()));
+    }
+}
+
+export class UserDTO {
+    id: string;
+    name: string;
+
+    constructor(id: string, name: string) {
+        this.id = id;
+        this.name = name;
+    }
+
+    static fromUser(user: User): UserDTO {
+        return new UserDTO(user.id, user.name);
+    }
+
+    static fromUsers(users: User[]): UserDTO[] {
+        return users.map((user) => UserDTO.fromUser(user));
+    }
+
+    static fromUserMap(users: Map<string, User>): UserDTO[] {
+        return UserDTO.fromUsers(Array.from(users.values()));
     }
 }

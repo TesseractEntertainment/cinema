@@ -2,6 +2,7 @@ import { Server, Socket } from 'socket.io';
 import { io } from './io';
 import { SocketEvents } from '../../frontend/src/common/socketEvents';
 import { BroadcastFunctions } from './Broadcast';
+import { UserDTO } from './DTOs';
 
 const users: Map<string, User> = new Map();
 
@@ -40,12 +41,12 @@ export class User {
 }
 
 function sendUsers() {
-    io.emit(SocketEvents.User.USERS, Array.from(users.values()));
+    io.emit(SocketEvents.User.USERS, UserDTO.fromUserMap(users));
 }
 
 function sendUsersTo(id: string) {
     try {
-        getUser(id).getSocket().emit(SocketEvents.User.USERS, Array.from(users.values()));
+        getUser(id).getSocket().emit(SocketEvents.User.USERS, UserDTO.fromUserMap(users));
         console.log('sent users to: ', getUser(id).name);
     }
     catch (error) {
@@ -54,11 +55,11 @@ function sendUsersTo(id: string) {
 }
 
 function sendUpdatedUser(user: User) {
-    io.emit(SocketEvents.User.UPDATED, user);
+    io.emit(SocketEvents.User.UPDATED, UserDTO.fromUser(user));
 }
 
 function sendCreatedUser(user: User) {
-    io.emit(SocketEvents.User.CREATED, user);
+    io.emit(SocketEvents.User.CREATED, UserDTO.fromUser(user));
 }
 
 // function sendAddedUser(user: User) {

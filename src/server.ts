@@ -10,22 +10,29 @@ io.on('connection', (socket) => {
     UserFunctions.createUser(socket.id);
 
     // Signaling
-    socket.on(SocketEvents.Signaling.OFFER, (offer, userId) => {
+    socket.on(SocketEvents.Signaling.OFFER, (offer, userId, callback) => {
+        console.log('offer from ' + socket.id + ' to ' + userId);
+        acknowledge(socket.id, callback);
         socket.to(userId).emit(SocketEvents.Signaling.OFFER, offer, socket.id);
     });
-    socket.on(SocketEvents.Signaling.ANSWER, (answer, userId) => {
+    socket.on(SocketEvents.Signaling.ANSWER, (answer, userId, callback) => {
+        acknowledge(socket.id, callback);
         socket.to(userId).emit(SocketEvents.Signaling.ANSWER, answer, socket.id);
     });
-    socket.on(SocketEvents.Signaling.ICE_CANDIDATE, (iceCandidate, userId) => {
+    socket.on(SocketEvents.Signaling.ICE_CANDIDATE, (iceCandidate, userId, callback) => {
+        acknowledge(socket.id, callback);
         socket.to(userId).emit(SocketEvents.Signaling.ICE_CANDIDATE, iceCandidate, socket.id);
     });
-    socket.on(SocketEvents.Signaling.DISCONNECTED, (userId) => {
+    socket.on(SocketEvents.Signaling.DISCONNECTED, (userId, callback) => {
+        acknowledge(socket.id, callback);
         socket.to(userId).emit(SocketEvents.Signaling.DISCONNECTED, socket.id);
     });
-    socket.on(SocketEvents.Signaling.REQUEST_AUDIO, (userId) => {
+    socket.on(SocketEvents.Signaling.REQUEST_AUDIO, (userId, callback) => {
+        acknowledge(socket.id, callback);
         socket.to(userId).emit(SocketEvents.Signaling.REQUESTED_AUDIO, socket.id);
     });
-    socket.on(SocketEvents.Signaling.REQUESTED_STOP_AUDIO, (userId) => {
+    socket.on(SocketEvents.Signaling.REQUESTED_STOP_AUDIO, (userId, callback) => {
+        acknowledge(socket.id, callback);
         socket.to(userId).emit(SocketEvents.Signaling.REQUESTED_STOP_AUDIO, socket.id);
     });
 
@@ -49,7 +56,7 @@ io.on('connection', (socket) => {
         acknowledge(socket.id, callback, BroadcastFunctions.updateBroadcast, broadcast);
     });
     socket.on(SocketEvents.Broadcast.GET_BROADCASTS, (callback) => {
-        acknowledge(socket.id, callback, BroadcastDTO.fromBroadcastMap, BroadcastFunctions.getBroadcasts());
+        acknowledge(socket.id, callback, BroadcastFunctions.getBroadcastsDTO);
     });
     socket.on(SocketEvents.Broadcast.GET_BROADCAST, (broadcastId, callback) => {
         acknowledge(socket.id, callback, BroadcastFunctions.getBroadcastDTO, broadcastId);
@@ -79,9 +86,7 @@ io.on('connection', (socket) => {
     });
 
     socket.on('disconnect', () => {
-        // Expect bugs?
         socket.offAny();
-        // Leave all broadcasts
         UserFunctions.deleteUser(socket.id); 
     });
 });
@@ -103,7 +108,7 @@ function getErrorMessage(error: any) {
     return errorMessage ? errorMessage : error.toString();
 }
 
-function acknowledge(socketId: string, callback: Function, returnAction: Function, ...args: any[]) {
+function acknowledge(socketId: string, callback: Function, returnAction: Function = () => undefined, ...args: any[]) {
     try {
         const result = returnAction(...args);
         if(callback instanceof Function) callback(result, true);

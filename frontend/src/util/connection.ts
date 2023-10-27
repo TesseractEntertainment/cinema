@@ -18,14 +18,12 @@ socket.on(SocketEvents.Signaling.ICE_CANDIDATE, onIcecandidate);
     
 
 function onConnect() {
-  console.log('registered');
   console.log('connected to server');
   setConnected(true);
-  // BroadcastFunctions.requestBroadcasts();
-  // UserFunctions.requestUsers();
 }
 
 function onDisconnect() {
+  console.log('disconnected from server');
   setConnected(false);
 }
 
@@ -122,7 +120,7 @@ function getPeerConnections() {
 function onICECandidate(event: RTCPeerConnectionIceEvent) {
     if (event.candidate) {
       console.log('new ICE candidate');
-      emitEvent('ice-candidate', event.candidate, (event.target as PeerConnection).id);
+      emitEvent(SocketEvents.Signaling.ICE_CANDIDATE, event.candidate, (event.target as PeerConnection).id);
     }
   }
 
@@ -139,7 +137,7 @@ async function onNegotiationNeeded(event: Event) {
     try {
       const offer = await _peerConnections.get(peerConnection.id)!.createOffer();
       await _peerConnections.get(peerConnection.id)!.setLocalDescription(offer);
-      emitEvent('offer', offer, peerConnection.id);
+      emitEvent(SocketEvents.Signaling.OFFER, offer, peerConnection.id);
     } catch (error) {
       console.error("Error creating offer:", error);
     }
@@ -220,8 +218,8 @@ function createPeerConnection(userId: string) {
 */
 function disconnectPeer(userId: string) {
   console.log('disconnecting from ', userId);
-  emitEvent('disconnect-peer', userId);
   closePeerConnection(userId);
+  emitEvent(SocketEvents.Signaling.DISCONNECTED, userId);
 }
 
 /*
@@ -268,7 +266,7 @@ function closePeerConnection(userId: string) {
 
 function requestStream(userId: string) {
   console.log('requesting stream from ', userId);
-  emitEvent('request-stream', userId);
+  emitEvent(SocketEvents.Signaling.REQUEST_AUDIO, userId);
 }
 
 // TODO
@@ -335,7 +333,7 @@ async function onOffer(offer: any, userId: string) {
   const ans = await peerConnection!.createAnswer();
   await peerConnection!.setLocalDescription(ans);
   
-  emitEvent('answer', ans, userId);
+  emitEvent(SocketEvents.Signaling.ANSWER, ans, userId);
 }
 
 async function onIcecandidate(candidate: any, userId: string) {

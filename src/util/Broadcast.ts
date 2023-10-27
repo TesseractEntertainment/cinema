@@ -58,6 +58,9 @@ export class Broadcast {
         if (this.isBroadcasting(userId)) {
             throw new Error(`User ${userId} is already broadcasting`);
         }
+        if (this.isListening(userId)) {
+            throw new Error(`User ${userId} is already listening`);
+        }
         user.getSocket().join(this._id);
         this._broadcasterIds.push(userId);
     }
@@ -72,6 +75,9 @@ export class Broadcast {
         const user = UserFunctions.getUser(userId);
         if (this.isListening(userId)) {
             throw new Error(`User ${userId} is already listening`);
+        }
+        if (this.isBroadcasting(userId)) {
+            throw new Error(`User ${userId} is already broadcasting`);
         }
         user.getSocket().join(this._id);
         this._listenerIds.push(userId);
@@ -188,6 +194,10 @@ function getBroadcasts(): Map<string, Broadcast> {
     return new Map(broadcasts);
 }
 
+function getBroadcastsDTO(): BroadcastDTO[] {
+    return BroadcastDTO.fromBroadcastMap(broadcasts);
+}
+
 /**
 * Returns a broadcast by id.
 * @param {string} id - The id of the broadcast to get.
@@ -257,6 +267,7 @@ function joinBroadcast(userId: string, broadcastId: string, asBroadcaster: boole
     const broadcast = getBroadcast(broadcastId);
     if (asBroadcaster) {
         broadcast.joinAsBroadcaster(userId);
+        // TODO: move this to the broadcast class
         sendBroadcasterJoined(userId, broadcastId);
     } else {
         broadcast.joinAsListener(userId);
@@ -279,7 +290,9 @@ function leaveBroadcasts(userId: string) {
 }
     
 
-export const BroadcastFunctions = { getBroadcasts,
+export const BroadcastFunctions = { 
+    getBroadcasts,
+    getBroadcastsDTO,
     getBroadcast,
     getBroadcastDTO,
     setBroadcast,

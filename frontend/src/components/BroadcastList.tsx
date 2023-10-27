@@ -24,8 +24,8 @@ export default function Broadcasts() {
                         <li key={broadcast.id}>
                             <h3>{broadcast.name}</h3>
                             <p><strong>Room ID:</strong> {broadcast.id}</p>
-                            <p><strong>Broadcasters:</strong> {broadcast.broadcasterIds.map(userId => UserFunctions.getUser(userId)?.name).join(', ')}</p>
-                            <p><strong>Listeners:</strong> {broadcast.listenerIds.map(userId => UserFunctions.getUser(userId)?.name).join(', ')}</p>
+                            <p><strong>Broadcasters:</strong> {broadcast.broadcasterIds.length}</p>
+                            <p><strong>Listeners:</strong> {broadcast.listenerIds.length}</p>
                         </li>
                     </Link>
                 ))}

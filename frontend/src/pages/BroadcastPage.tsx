@@ -3,6 +3,7 @@ import { Broadcast, BroadcastFunctions } from '../util/broadcast';
 import { UserFunctions } from '../util/user';
 import { useLoaderData, useNavigate } from 'react-router-dom';
 import { Dispatcher, DispatcherEvents } from '../util/dispatcher';
+import { User } from '../util/user';
 
 export async function loader({params: {id}}: {params: {id: string}}) {
   const broadcast = await BroadcastFunctions.getBroadcastAsync(id);
@@ -14,8 +15,18 @@ export default function BroadcastPage() {
     const navigate = useNavigate();
     const data = useLoaderData() as {broadcast: Broadcast};
     const [broadcast, setBroadcast] = React.useState<Broadcast>(data.broadcast);
+    const [broadcastUsers, setBroadcastUsers] = React.useState<User[]|null>(null);
 
     React.useEffect(() => {
+      async function getUsers() {
+        setBroadcastUsers(null);
+        setBroadcastUsers(await Promise.all([
+          ...broadcast.listenerIds.map(UserFunctions.getUserAsync),
+          ...broadcast.broadcasterIds.map(UserFunctions.getUserAsync),
+        ]));
+      }
+
+      getUsers();
       setBroadcast(data.broadcast);
       console.log('BroadcastPage useEffect');
       Dispatcher.addListener(DispatcherEvents.SET_BROADCAST_STATE + data.broadcast.id, setBroadcast);
@@ -44,13 +55,18 @@ export default function BroadcastPage() {
     // TODO: Add actual broadcast editing logic
   };
 
-  const handleJoin = () => {
+  const handleListen = () => {
     BroadcastFunctions.listen(broadcast.id);
   }
 
+  // TODO: rethink double join/leave logic
   const handleLeave = () => {
     BroadcastFunctions.leave(broadcast.id);
   } 
+
+  const handleBroadcast = () => {
+    BroadcastFunctions.broadcast(broadcast.id);
+  }
 
   return (
     broadcast &&
@@ -59,23 +75,27 @@ export default function BroadcastPage() {
       <div className="broadcast-details">
         <h3>Room ID</h3>
         <p>{broadcast.id}</p>
+        {broadcastUsers ? (<>
         <h3>Listeners: {broadcast.listenerIds.length}</h3>
         <ul>
           {broadcast.listenerIds.map(listenerId => (
-            <li key={listenerId}>{UserFunctions.getUser(listenerId)?.name}</li>
+            <li key={listenerId}>{broadcastUsers.find((user) => listenerId == user.id)!.name}</li>
           ))}
         </ul>
-        <h3>Broadcasters</h3>
+        <h3>Broadcasters: {broadcast.broadcasterIds.length}</h3>
         <ul>
           {broadcast.broadcasterIds.map(broadcasterId => (
-            <li key={broadcasterId}>{UserFunctions.getUser(broadcasterId)?.name}</li>
+            <li key={broadcasterId}>{broadcastUsers.find((user) => broadcasterId == user.id)!.name}</li>
           ))}
         </ul>
+        </>)
+        : (<p>Loading users...</p>)}
       </div>
       <div className="broadcast-actions">
         <button onClick={handleEdit} className="edit-button">Edit</button>
         <button onClick={handleDelete} className="delete-button">Delete</button>
-        <button onClick={handleJoin} className="join-button">Join</button>
+        <button onClick={handleListen} className="join-button">Listen</button>
+        <button onClick={handleBroadcast} className="join-button">Broadcast</button>
         <button onClick={handleLeave} className="leave-button">Leave</button>
       </div>
     </div>

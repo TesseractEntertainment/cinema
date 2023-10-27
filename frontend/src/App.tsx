@@ -5,7 +5,6 @@ import { SocketEvents } from './common/socketEvents';
 import { Dispatcher, DispatcherEvents } from './util/dispatcher';
 import './util/connection';
 
-// TODO: error callbacks/acknowledgements
 export function onError(...errors: any[]) {
   var errorMessage = "";
   if (!errors) {
