@@ -31,7 +31,7 @@ export default function Broadcasts() {
                 ))}
             </ul>
             : <p>No Broadcasts</p>}
-            <Link to="/create-broadcast"><button>Create New Broadcast</button></Link>
+            <Link to="/broadcast/create"><button>Create New Broadcast</button></Link>
         </div>
         </div>
     );

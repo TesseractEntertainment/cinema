@@ -20,7 +20,7 @@ const router = createBrowserRouter([
         element: <Layout title='Tesseract'/>,
         children: [
           { index: true, element: <LandingPage />},
-          { path: "create-broadcast", element: <CreateBroadcastPage />},
+          { path: "broadcast/create", element: <CreateBroadcastPage />},
           { path: "broadcast/:id", element: <BroadcastPage />, loader: broadcastLoader}
         ]
       },
