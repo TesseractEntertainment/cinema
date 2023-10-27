@@ -4,21 +4,6 @@ import { Dispatcher, DispatcherEvents } from '../util/dispatcher';
 import { User, UserFunctions } from '../util/user';
 import '../styles/user.css';
 
-interface ConnectionButtonProps {
-    user: User;
-    peerConnections: Map<string, PeerConnection>;
-}
-function ConnectionButton({user, peerConnections}: ConnectionButtonProps) {
-    console.log('user: ', user);
-    const isConnected = peerConnections.has(user.id) && ['connected', 'stable'].includes(user.connectionState);
-    const text = isConnected ? 'Disconnect' : 'Connect';
-    const onClick = isConnected ? () => ConnectionFunctions.disconnectPeer(user.id) : () => ConnectionFunctions.requestStream(user.id);
-    
-    return (
-        <button onClick={onClick}>{text}</button>
-    );
-}
-
 function onConnect(userId: string) {
     ConnectionFunctions.createPeerConnection(userId);
 }
@@ -34,7 +19,7 @@ function onStreamTo(userId: string) {
 
 export function Users() {
   const [users, setUsers] = useState<User[]>(UserFunctions.getUsers());
-  const [, forceUpdate] = useReducer(x => x + 1, 0);
+//   const [, forceUpdate] = useReducer(x => x + 1, 0);
 //   const peerConnections = ConnectionFunctions.getPeerConnections();
   useEffect(() => {
       Dispatcher.addListener(DispatcherEvents.SET_USER_STATE, setUsers);

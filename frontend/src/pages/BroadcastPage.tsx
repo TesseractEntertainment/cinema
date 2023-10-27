@@ -18,15 +18,6 @@ export default function BroadcastPage() {
     const [broadcastUsers, setBroadcastUsers] = React.useState<User[]|null>(null);
 
     React.useEffect(() => {
-      async function getUsers() {
-        setBroadcastUsers(null);
-        setBroadcastUsers(await Promise.all([
-          ...broadcast.listenerIds.map(UserFunctions.getUserAsync),
-          ...broadcast.broadcasterIds.map(UserFunctions.getUserAsync),
-        ]));
-      }
-
-      getUsers();
       setBroadcast(data.broadcast);
       console.log('BroadcastPage useEffect');
       Dispatcher.addListener(DispatcherEvents.SET_BROADCAST_STATE + data.broadcast.id, setBroadcast);
@@ -34,6 +25,22 @@ export default function BroadcastPage() {
         Dispatcher.removeListener(DispatcherEvents.SET_BROADCAST_STATE + data.broadcast.id, setBroadcast);
       };
     }, [data.broadcast]);
+
+    React.useEffect(() => {
+      async function getUsers() {
+        setBroadcastUsers(null);
+        if (!broadcast) {
+          return;
+        }
+        setBroadcastUsers(await Promise.all([
+          ...broadcast.listenerIds.map(UserFunctions.getUserAsync),
+          ...broadcast.broadcasterIds.map(UserFunctions.getUserAsync),
+        ]));
+      }
+
+      getUsers();
+    }, [broadcast]);
+
 
     // if (!broadcast) {
     //     return (
@@ -79,13 +86,13 @@ export default function BroadcastPage() {
         <h3>Listeners: {broadcast.listenerIds.length}</h3>
         <ul>
           {broadcast.listenerIds.map(listenerId => (
-            <li key={listenerId}>{broadcastUsers.find((user) => listenerId == user.id)!.name}</li>
+            <li key={listenerId}>{broadcastUsers.find((user) => listenerId == user.id)?.name}</li>
           ))}
         </ul>
         <h3>Broadcasters: {broadcast.broadcasterIds.length}</h3>
         <ul>
           {broadcast.broadcasterIds.map(broadcasterId => (
-            <li key={broadcasterId}>{broadcastUsers.find((user) => broadcasterId == user.id)!.name}</li>
+            <li key={broadcasterId}>{broadcastUsers.find((user) => broadcasterId == user.id)?.name}</li>
           ))}
         </ul>
         </>)
@@ -98,6 +105,7 @@ export default function BroadcastPage() {
         <button onClick={handleBroadcast} className="join-button">Broadcast</button>
         <button onClick={handleLeave} className="leave-button">Leave</button>
       </div>
+      <audio controls />
     </div>
   );
 }

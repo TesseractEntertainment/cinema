@@ -10,8 +10,21 @@ export const app: Express = express();
 export const http: HTTPServer = createServer(app);
 
 app.use(cors({
-    origin: 'http://localhost:3000'
+    origin: 'http://0.0.0.0:3000',
 }));
+// app.use(cors({
+//     origin: function(origin, callback) {
+//       // Allow requests with no origin (like mobile apps or curl requests)
+//       if (!origin) return callback(null, true);
+  
+//     //   if (allowedOrigins.indexOf(origin) === -1) {
+//     //     const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
+//     //     return callback(new Error(msg), false);
+//     //   }
+  
+//       return callback(null, true);
+//     }
+// }));
 
 app.use(express.static('./tesseractcinema-frontend/public'));
 
@@ -19,6 +32,9 @@ app.get('/', (req: Request, res: Response) => {
     res.send('TesseractCinema Backend');
 });
 
+// http.listen(PORT, '0.0.0.0',() => {
+//     console.log(`Server is running on http://localhost:${PORT}`);
+// });
 http.listen(PORT, () => {
     console.log(`Server is running on http://localhost:${PORT}`);
 });
@@ -40,3 +56,11 @@ export const io: Server = new Server(http, {
         methods: ["GET", "POST"]
     }
 });
+// export const io: Server = new Server(http, {
+//     cors: {
+//         origin: function(origin, callback) {
+//             return callback(null, true);
+//         },
+//         methods: ["GET", "POST"]
+//     }
+// });

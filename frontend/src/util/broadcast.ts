@@ -1,8 +1,10 @@
 import socket from "../socket";
 import { Dispatcher, DispatcherEvents } from "./dispatcher";
-import { emitEvent } from "./connection";
+import { ConnectionFunctions, emitEvent } from "./connection";
 import { SocketEvents } from '../common/socketEvents';
 import { BroadcastDTO } from "./DTOs";
+import { emit } from "process";
+import { useNavigate } from "react-router-dom";
 
 var _broadcasts: Broadcast[] = [];
 
@@ -120,16 +122,29 @@ function onListenerJoin(broadcastId: string, userId: string) {
             ...broadcast,
             listenerIds: [...broadcast.listenerIds, userId]
         });
+
+        // request audio from broadcasters
+        // TODO: move this to a better place
+        if (userId === socket.id) {
+            broadcast.broadcasterIds.forEach((broadcasterId) => {
+                emitEvent(SocketEvents.Signaling.REQUEST_AUDIO, broadcasterId);
+            }
+        )}
     });
 }
+
 function onBroadcasterJoin(broadcastId: string, userId: string) {
     getBroadcastAsync(broadcastId).then((broadcast) => {
         _updateBroadcast(broadcastId, {
             ...broadcast,
             broadcasterIds: [...broadcast.broadcasterIds, userId]
         });
+        if (broadcast.listenerIds.includes(socket.id)) {
+            emitEvent(SocketEvents.Signaling.REQUEST_AUDIO, userId);
+        }
     });
 }
+
 function onListenerLeave(broadcastId: string, userId: string) {
     console.log('listener left: ', userId);
     getBroadcastAsync(broadcastId).then((broadcast) => {
@@ -137,6 +152,13 @@ function onListenerLeave(broadcastId: string, userId: string) {
             ...broadcast,
             listenerIds: broadcast.listenerIds.filter((id) => id !== userId)
         });
+
+        // stop audio from broadcasters
+        if (userId === socket.id) {
+            broadcast.broadcasterIds.forEach((broadcasterId) => {
+                ConnectionFunctions.closePeerConnection(broadcasterId);
+            }
+        )}
     });
 }
 function onBroadcasterLeave(broadcastId: string, userId: string) {
@@ -145,11 +167,29 @@ function onBroadcasterLeave(broadcastId: string, userId: string) {
             ...broadcast,
             broadcasterIds: broadcast.broadcasterIds.filter((id) => id !== userId)
         });
+        if (userId === socket.id) {
+            broadcast.listenerIds.forEach((listenerId) => {
+                ConnectionFunctions.closePeerConnection(listenerId);
+            }
+        )}
     });
 }
 
 function onTerminate(broadcastId: string) {
-  _removeBroadcast(broadcastId);
+    // TODO: move to a better place
+    getBroadcastAsync(broadcastId).then((broadcast) => {
+        broadcast.broadcasterIds.forEach((broadcasterId) => {
+            ConnectionFunctions.closePeerConnection(broadcasterId);
+        });
+        broadcast.listenerIds.forEach((listenerId) => {
+            ConnectionFunctions.closePeerConnection(listenerId);
+        }
+    )});
+    _removeBroadcast(broadcastId);
+    if(window.location.pathname.includes(`broadcast/${broadcastId}`)) {
+        // TODO: use history.push
+        window.location.href = '/';
+    }
 }
 
 function onCreate(broadcastDTO: BroadcastDTO) {

@@ -50,7 +50,10 @@ enum Signaling {
     OFFER = 'signaling-offer', // (offer: RTCSessionDescriptionInit, userId: string)
     ANSWER = 'signaling-answer', // (answer: RTCSessionDescriptionInit, userId: string)
     ICE_CANDIDATE = 'signaling-ice-candidate', // (iceCandidate: RTCIceCandidate, userId: string)
-
+    /**
+     * Requests the user to send an audio stream
+     * @param {string} userId - The user to request audio from
+     */
     REQUEST_AUDIO = 'signaling-request-audio', // (userId: string)
     REQUEST_STOP_AUDIO = 'signaling-request-stop-audio', // (userId: string)    
     DISCONNECTED = 'signaling-disconnected', // (userId: string)
